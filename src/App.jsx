@@ -37,10 +37,13 @@ import {
   Eye,
   MessageSquare,
   Bell,
+  Clock,
+  AlertTriangle,
   Megaphone,
   ChevronDown,
   Tag,
   Link as LinkIcon,
+  ShieldAlert,
   Mail,
   Building
 } from 'lucide-react';
@@ -80,31 +83,31 @@ const generateCredentials = () => {
 };
 
 const App = () => {
-  // --- 認証 & ロール状態 ---
-  const [currentUser, setCurrentUser] = useState(null); // { role, id, name, studentId?, nextClassDate? }
+  // --- Auth & Role State ---
+  const [currentUser, setCurrentUser] = useState(null); 
   const [loginId, setLoginId] = useState('');
   const [password, setPassword] = useState('');
   const [authError, setAuthError] = useState('');
 
-  // --- UI状態 ---
+  // --- UI State ---
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showReport, setShowReport] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
 
-  // --- データ状態 ---
+  // --- Data State ---
   const [costs, setCosts] = useState({ '家賃': 150000, '水道光熱費': 30000, '講師費用': 200000, '教材費': 50000, '備品費': 20000 });
-  // const [sponsorship, setSponsorship] = useState(300000); // Removed manual state
   const [bufferStudentTarget, setBufferStudentTarget] = useState(5);
   const [historyRecords, setHistoryRecords] = useState([]);
   const [students, setStudents] = useState([]);
   const [learningRecords, setLearningRecords] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
+  const [sponsors, setSponsors] = useState([]);
   const [recordMonth, setRecordMonth] = useState(new Date().toISOString().slice(0, 7));
   const [isRecording, setIsRecording] = useState(false);
 
-  // --- 生徒フォーム状態 ---
+  // --- Student Form State ---
   const [editingStudent, setEditingStudent] = useState(null);
-  const [studentForm, setStudentForm] = useState({
+  const [studentForm, setStudentForm] = useState({ 
     name: '', school: '', age: '', courseId: 'premium', remarks: '', nextClassDate: '',
     studentLoginId: '', studentPassword: '', parentLoginId: '', parentPassword: ''
   });
@@ -117,12 +120,11 @@ const App = () => {
 
   // --- 教材データ状態 ---
   const [materials, setMaterials] = useState([]);
-  const [materialForm, setMaterialForm] = useState({ title: '', url: '', tags: '' }); // tags is comma separated string
+  const [materialForm, setMaterialForm] = useState({ title: '', url: '', tags: '' });
   const [editingMaterial, setEditingMaterial] = useState(null);
   const [selectedTag, setSelectedTag] = useState('All');
 
-  // --- 協賛企業データ状態 ---
-  const [sponsors, setSponsors] = useState([]);
+  // --- 協賛企業フォーム状態 ---
   const [sponsorForm, setSponsorForm] = useState({ name: '', repName: '', email: '', amount: '' });
   const [editingSponsor, setEditingSponsor] = useState(null);
 
@@ -136,12 +138,14 @@ const App = () => {
       }
     };
     initAuth();
+    const unsubscribeAuth = onAuthStateChanged(auth, setCurrentUser);
+    return () => unsubscribeAuth();
   }, []);
 
   useEffect(() => {
     if (!currentUser) return;
 
-    // データ購読（ロールに関わらず基本データは購読）
+    // Firestoreの全データを同期
     const unsubRecords = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'monthly_records'), (snap) => {
       setHistoryRecords(snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => a.month.localeCompare(b.month)));
     });
@@ -152,64 +156,24 @@ const App = () => {
       setAnnouncements(snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => b.createdAt?.toMillis() - a.createdAt?.toMillis()));
     });
     const unsubLearning = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'learning_records'), (snap) => {
-      const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      if (currentUser.role === 'student') {
-        setLearningRecords(all.filter(r => r.studentId === currentUser.studentId));
-      } else if (currentUser.role === 'parent') {
-        setLearningRecords(all.filter(r => r.studentId === currentUser.childId));
-      } else {
-        setLearningRecords(all);
-      }
+      setLearningRecords(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
     const unsubMaterials = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'materials'), (snap) => {
       setMaterials(snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => b.createdAt?.toMillis() - a.createdAt?.toMillis()));
     });
-
-    return () => { unsubRecords(); unsubStudents(); unsubAnnounce(); unsubLearning(); unsubMaterials(); };
-  }, [currentUser]);
-
-  // --- ログイン処理 ---
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setAuthError('');
-
-    // 管理者ログイン (admin / admin123)
-    if (loginId === 'admin' && password === 'admin123') {
-      setCurrentUser({ role: 'admin', name: 'システム管理者' });
-      setActiveTab('dashboard');
-      return;
-    }
-
-    // 生徒・保護者ログイン情報をFirestoreから検索
-    const studentsCol = collection(db, 'artifacts', appId, 'public', 'data', 'students');
-    const q = query(studentsCol);
-    const querySnapshot = await getDocs(q);
-
-    let found = null;
-    querySnapshot.forEach((docSnap) => {
-      const data = docSnap.data();
-      if (data.studentLoginId === loginId && data.studentPassword === password) {
-        found = { role: 'student', name: data.name, studentId: docSnap.id, nextClassDate: data.nextClassDate };
-      } else if (data.parentLoginId === loginId && data.parentPassword === password) {
-        found = { role: 'parent', name: `${data.name}の保護者`, childId: docSnap.id, childName: data.name, nextClassDate: data.nextClassDate };
-      }
+    const unsubSponsors = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'sponsors'), (snap) => {
+      setSponsors(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
 
-    if (found) {
-      setCurrentUser(found);
-      setActiveTab('mypage');
-    } else {
-      setAuthError('IDまたはパスワードが正しくありません');
-    }
-  };
-
-  const handleLogout = () => {
-    setCurrentUser(null);
-    setLoginId('');
-    setPassword('');
-  };
+    return () => { 
+      unsubRecords(); unsubStudents(); unsubAnnounce(); 
+      unsubLearning(); unsubMaterials(); unsubSponsors(); 
+    };
+  }, [currentUser]);
 
   // --- 計算ロジック ---
+  const sponsorship = useMemo(() => sponsors.reduce((acc, s) => acc + (Number(s.amount) || 0), 0), [sponsors]);
+
   const studentCountsFromDb = useMemo(() => {
     const counts = { premium: 0, standard: 0, basic: 0, entry: 0 };
     students.forEach(s => { if (counts[s.courseId] !== undefined) counts[s.courseId]++; });
@@ -218,15 +182,11 @@ const App = () => {
 
   const totalOperatingCost = useMemo(() => Object.values(costs).reduce((acc, curr) => acc + curr, 0), [costs]);
   const totalStudents = students.length;
-  // Calculate sponsorship from DB records
-  const sponsorship = useMemo(() => sponsors.reduce((acc, s) => acc + (s.amount || 0), 0), [sponsors]);
-
   const totalBaseRevenue = COURSE_BASES.reduce((acc, c) => acc + (c.price * (studentCountsFromDb[c.id] || 0)), 0);
   const bufferAmount = bufferStudentTarget * COURSE_BASES[0].price;
   const availableSurplus = (totalBaseRevenue + sponsorship) - (totalOperatingCost + bufferAmount);
   const reductionPerStudent = totalStudents === 0 ? 0 : Math.max(0, Math.floor(availableSurplus / totalStudents / 1000) * 1000);
   const coverageRate = Math.min(100, totalOperatingCost > 0 ? Math.round((sponsorship / totalOperatingCost) * 100) : 0);
-
   const finalNetSurplus = availableSurplus - (reductionPerStudent * totalStudents);
   const capacityPerCourse = useMemo(() => {
     const pool = finalNetSurplus + bufferAmount;
@@ -236,172 +196,136 @@ const App = () => {
     }));
   }, [finalNetSurplus, bufferAmount, reductionPerStudent]);
 
-  // --- ハンドラー ---
+  // --- 各種ハンドラー ---
   const handleCostChange = (key, value) => setCosts(prev => ({ ...prev, [key]: parseInt(value) || 0 }));
 
-  const recordMonthlyStatus = async () => {
-    if (!currentUser) return; // Changed from `user` to `currentUser`
-    setIsRecording(true);
-    try {
-      const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'monthly_records', recordMonth);
-      await setDoc(docRef, {
-        month: recordMonth,
-        costs, sponsorship, bufferStudentTarget,
-        totalCost: totalOperatingCost,
-        studentCounts: studentCountsFromDb,
-        totalStudents, reductionAmount: reductionPerStudent,
-        coverageRate, recordedAt: serverTimestamp()
-      });
-      setSaveMessage(`${recordMonth}の記録を保存しました`);
-    } catch (e) { setSaveMessage('保存に失敗しました'); }
-    finally { setIsRecording(false); setTimeout(() => setSaveMessage(''), 3000); }
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setAuthError('');
+    if (loginId === 'admin' && password === 'admin123') {
+      setCurrentUser({ role: 'admin', name: 'システム管理者' });
+      setActiveTab('dashboard');
+      return;
+    }
+    const querySnapshot = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'students'));
+    let found = null;
+    querySnapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      if (data.studentLoginId === loginId && data.studentPassword === password) {
+        found = { role: 'student', name: data.name, studentId: docSnap.id, nextClassDate: data.nextClassDate };
+      } else if (data.parentLoginId === loginId && data.parentPassword === password) {
+        found = { role: 'parent', name: `${data.name}の保護者`, childId: docSnap.id, childName: data.name, nextClassDate: data.nextClassDate };
+      }
+    });
+    if (found) { setCurrentUser(found); setActiveTab('mypage'); }
+    else { setAuthError('IDまたはパスワードが正しくありません'); }
   };
+
+  const handleLogout = () => { setCurrentUser(null); setLoginId(''); setPassword(''); };
 
   const fillCredentials = () => {
     const s = generateCredentials();
     const p = generateCredentials();
     setStudentForm(prev => ({
-      ...prev,
-      studentLoginId: s.id, studentPassword: s.pw,
-      parentLoginId: p.id, parentPassword: p.pw
+      ...prev, studentLoginId: s.id, studentPassword: s.pw, parentLoginId: p.id, parentPassword: p.pw
     }));
   };
 
   const saveStudent = async (e) => {
     e.preventDefault();
     try {
+      const sId = studentForm.studentLoginId || generateCredentials().id;
+      const sPw = studentForm.studentPassword || generateCredentials().pw;
+      const pId = studentForm.parentLoginId || generateCredentials().id;
+      const pPw = studentForm.parentPassword || generateCredentials().pw;
+      const data = { ...studentForm, studentLoginId: sId, studentPassword: sPw, parentLoginId: pId, parentPassword: pPw, updatedAt: serverTimestamp() };
       if (editingStudent) {
-        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'students', editingStudent.id), {
-          ...studentForm, updatedAt: serverTimestamp()
-        });
-        setSaveMessage('更新しました');
+        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'students', editingStudent.id), data);
+        setSaveMessage('更新完了');
       } else {
-        // Use manually entered credentials or generate if empty
-        const sId = studentForm.studentLoginId || generateCredentials().id;
-        const sPw = studentForm.studentPassword || generateCredentials().pw;
-        const pId = studentForm.parentLoginId || generateCredentials().id;
-        const pPw = studentForm.parentPassword || generateCredentials().pw;
-
-        const data = {
-          ...studentForm,
-          studentLoginId: sId, studentPassword: sPw,
-          parentLoginId: pId, parentPassword: pPw,
-          createdAt: serverTimestamp()
-        };
-        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'students'), data);
-        setGeneratedCreds({
-          student: { id: sId, pw: sPw },
-          parent: { id: pId, pw: pPw },
-          name: studentForm.name
-        });
-        setSaveMessage('登録・ID発行完了');
+        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'students'), { ...data, createdAt: serverTimestamp() });
+        setGeneratedCreds({ student: { id: sId, pw: sPw }, parent: { id: pId, pw: pPw }, name: studentForm.name });
+        setSaveMessage('登録完了');
       }
-      setStudentForm({
-        name: '', school: '', age: '', courseId: 'premium', remarks: '', nextClassDate: '',
-        studentLoginId: '', studentPassword: '', parentLoginId: '', parentPassword: ''
-      });
+      setStudentForm({ name: '', school: '', age: '', courseId: 'premium', remarks: '', nextClassDate: '', studentLoginId: '', studentPassword: '', parentLoginId: '', parentPassword: '' });
       setEditingStudent(null);
-    } catch (e) { setSaveMessage('エラーが発生しました'); }
-    setTimeout(() => setSaveMessage(''), 4000);
-  };
-
-  const submitLearningRecord = async (e) => {
-    e.preventDefault();
-    try {
-      await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'learning_records'), {
-        ...newLearningRecord,
-        studentId: currentUser.studentId, studentName: currentUser.name,
-        date: new Date().toISOString(), createdAt: serverTimestamp(),
-        comment: ''
-      });
-      setNewLearningRecord({ title: '', content: '', imageUrl: '' });
-      setSaveMessage('記録を保存しました');
-    } catch (e) { setSaveMessage('保存失敗'); }
-    setTimeout(() => setSaveMessage(''), 3000);
-  };
-
-  const submitAdminComment = async (recordId) => {
-    try {
-      await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'learning_records', recordId), {
-        comment: adminComment[recordId],
-        commentedAt: serverTimestamp()
-      });
-      setSaveMessage('コメントを送信しました');
-    } catch (e) { setSaveMessage('送信失敗'); }
-  };
-
-  const postAnnouncement = async (e) => { // Added missing postAnnouncement function
-    e.preventDefault();
-    try {
-      await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'announcements'), {
-        ...announcementForm,
-        createdAt: serverTimestamp()
-      });
-      setAnnouncementForm({ title: '', content: '', type: 'info' });
-      setSaveMessage('お知らせを公開しました');
-    } catch (e) { setSaveMessage('公開失敗'); }
-    setTimeout(() => setSaveMessage(''), 3000);
-  };
-
-  const saveMaterial = async (e) => {
-    e.preventDefault();
-    try {
-      const tagsArray = materialForm.tags.split(',').map(t => t.trim()).filter(t => t);
-      if (editingMaterial) {
-        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'materials', editingMaterial.id), {
-          ...materialForm, tags: tagsArray, updatedAt: serverTimestamp()
-        });
-        setSaveMessage('教材を更新しました');
-      } else {
-        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'materials'), {
-          ...materialForm, tags: tagsArray, createdAt: serverTimestamp()
-        });
-        setSaveMessage('教材を追加しました');
-      }
-      setMaterialForm({ title: '', url: '', tags: '' });
-      setEditingMaterial(null);
     } catch (e) { setSaveMessage('保存エラー'); }
-    setTimeout(() => setSaveMessage(''), 3000);
-  };
-
-  const deleteMaterial = async (materialId) => {
-    try {
-      await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'materials', materialId));
-      setSaveMessage('教材を削除しました');
-    } catch (e) {
-      setSaveMessage('削除に失敗しました');
-    }
     setTimeout(() => setSaveMessage(''), 3000);
   };
 
   const saveSponsor = async (e) => {
     e.preventDefault();
     try {
-      const amountVal = parseInt(sponsorForm.amount) || 0;
+      const data = { ...sponsorForm, amount: Number(sponsorForm.amount) || 0, updatedAt: serverTimestamp() };
       if (editingSponsor) {
-        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'sponsors', editingSponsor.id), {
-          ...sponsorForm, amount: amountVal, updatedAt: serverTimestamp()
-        });
-        setSaveMessage('協賛企業情報を更新しました');
+        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'sponsors', editingSponsor.id), data);
       } else {
-        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'sponsors'), {
-          ...sponsorForm, amount: amountVal, createdAt: serverTimestamp()
-        });
-        setSaveMessage('協賛企業を追加しました');
+        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'sponsors'), { ...data, createdAt: serverTimestamp() });
       }
       setSponsorForm({ name: '', repName: '', email: '', amount: '' });
       setEditingSponsor(null);
+      setSaveMessage('保存しました');
     } catch (e) { setSaveMessage('保存エラー'); }
     setTimeout(() => setSaveMessage(''), 3000);
   };
 
   const deleteSponsor = async (id) => {
+    if (!window.confirm('この企業を削除しますか？')) return;
     try {
       await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'sponsors', id));
       setSaveMessage('削除しました');
-    } catch (e) { setSaveMessage('削除失敗'); }
+    } catch (e) { setSaveMessage('失敗'); }
   };
 
+  const recordMonthlyStatus = async () => {
+    setIsRecording(true);
+    try {
+      const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'monthly_records', recordMonth);
+      await setDoc(docRef, {
+        month: recordMonth, costs, sponsorship, bufferStudentTarget,
+        totalCost: totalOperatingCost, studentCounts: studentCountsFromDb,
+        totalStudents, reductionAmount: reductionPerStudent, recordedAt: serverTimestamp()
+      });
+      setSaveMessage('月次データを保存しました');
+    } catch (e) { setSaveMessage('エラー'); }
+    finally { setIsRecording(false); }
+  };
+
+  const saveMaterial = async (e) => {
+    e.preventDefault();
+    try {
+      const tagsArray = materialForm.tags.split(',').map(t => t.trim()).filter(t => t);
+      const data = { ...materialForm, tags: tagsArray, updatedAt: serverTimestamp() };
+      if (editingMaterial) {
+        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'materials', editingMaterial.id), data);
+      } else {
+        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'materials'), { ...data, createdAt: serverTimestamp() });
+      }
+      setMaterialForm({ title: '', url: '', tags: '' });
+      setEditingMaterial(null);
+      setSaveMessage('教材保存完了');
+    } catch (e) { setSaveMessage('エラー'); }
+  };
+
+  const submitLearningRecord = async (e) => {
+    e.preventDefault();
+    try {
+      await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'learning_records'), {
+        ...newLearningRecord, studentId: currentUser.studentId, studentName: currentUser.name, date: new Date().toISOString(), createdAt: serverTimestamp(), comment: ''
+      });
+      setNewLearningRecord({ title: '', content: '', imageUrl: '' });
+      setSaveMessage('記録しました');
+    } catch (e) { setSaveMessage('失敗'); }
+  };
+
+  const submitAdminComment = async (recordId) => {
+    try {
+      await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'learning_records', recordId), {
+        comment: adminComment[recordId], commentedAt: serverTimestamp()
+      });
+      setSaveMessage('送信しました');
+    } catch (e) { setSaveMessage('失敗'); }
+  };
 
   // --- サブコンポーネント: TrendChart ---
   const TrendChart = () => {
@@ -410,11 +334,11 @@ const App = () => {
     const points = (valKey) => historyRecords.map((r, i) => `${(i / (historyRecords.length - 1)) * 100},${100 - ((r[valKey] || 0) / maxVal) * 100}`).join(' ');
     return (
       <div className="w-full bg-slate-900 rounded-3xl p-6 text-white shadow-xl relative mb-6">
-        <div className="flex justify-between items-center mb-4 text-[10px] font-bold tracking-widest">
-          <div className="flex items-center gap-2 text-orange-400 uppercase"><TrendingUp size={14} /> 運営推移分析</div>
+        <div className="flex justify-between items-center mb-4 text-[10px] font-bold tracking-widest uppercase">
+          <div className="flex items-center gap-2 text-orange-400 tracking-[0.2em]"><TrendingUp size={14} /> ANALYTICS</div>
           <div className="flex gap-4">
-            <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-orange-500"></div>協賛</span>
-            <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-slate-400"></div>運営</span>
+             <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-orange-500"></div> 協賛</span>
+             <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-slate-400"></div> 運営</span>
           </div>
         </div>
         <svg viewBox="0 0 100 100" className="w-full h-32 md:h-24 overflow-visible" preserveAspectRatio="none">
@@ -425,83 +349,55 @@ const App = () => {
     );
   };
 
-  // --- サブコンポーネント: ReportModal ---
+  // --- 報告書PDFプレビューモーダル ---
   const ReportModal = () => (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-0 md:p-4 print:p-0 print:bg-white print:static print:inset-auto text-left">
+    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-0 md:p-4 print:p-0 print:bg-white print:static text-left overflow-y-auto">
       <div className="bg-white w-full h-full md:h-auto md:max-w-5xl md:max-h-[95vh] overflow-y-auto md:rounded-3xl shadow-2xl print:shadow-none print:max-h-full print:rounded-none">
         <div className="p-4 md:p-6 border-b flex justify-between items-center bg-slate-50 sticky top-0 z-20 print:hidden">
-          <div className="flex items-center gap-2 font-bold text-slate-700">
-            <FileText className="text-orange-600 w-5 h-5" />
-            協賛成果報告書 プレビュー
-          </div>
+          <div className="flex items-center gap-2 font-bold text-slate-700"><FileText className="text-orange-600 w-5 h-5" /> 報告書プレビュー</div>
           <div className="flex gap-2">
-            <button onClick={() => window.print()} className="bg-orange-600 text-white px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-orange-700 shadow-lg transition-all">
-              <Printer size={18} /> <span className="text-sm font-bold">PDFとして保存</span>
-            </button>
-            <button onClick={() => setShowReport(false)} className="bg-white border border-slate-200 p-2 rounded-xl text-slate-500 hover:bg-slate-50 transition-all"><X size={20} /></button>
+            <button onClick={() => window.print()} className="bg-orange-600 text-white px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-orange-700 shadow-lg text-xs md:text-sm font-bold"><Printer size={18} /> PDF出力</button>
+            <button onClick={() => setShowReport(false)} className="bg-white border border-slate-200 p-2 rounded-xl text-slate-500 hover:bg-slate-50"><X size={20} /></button>
           </div>
         </div>
-
         <div className="p-8 md:p-16 print:p-10 space-y-12 text-slate-800 bg-white">
           <div className="flex flex-col md:flex-row justify-between items-start gap-6">
             <div className="space-y-2 text-left">
               <div className="bg-orange-600 text-white px-3 py-1 text-[10px] font-bold tracking-[0.3em] inline-block rounded-sm">CONFIDENTIAL</div>
-              <h2 className="text-3xl md:text-4xl font-black tracking-tighter text-slate-900">協賛活動成果報告書</h2>
+              <h2 className="text-3xl md:text-4xl font-black tracking-tighter">協賛活動成果報告書</h2>
               <p className="text-slate-500 font-medium">教育支援を通じた社会貢献と提供インパクトの可視化</p>
             </div>
             <div className="text-left md:text-right border-l-2 md:border-l-0 md:border-r-2 border-orange-500 pl-4 md:pr-4">
-              <p className="text-xs font-bold text-slate-400">発行元</p>
-              <p className="text-sm font-black text-slate-800">クリエット教育支援プロジェクト</p>
-              <p className="text-[10px] font-bold text-orange-600 uppercase pt-1">Academic Year 2025</p>
+              <p className="text-xs font-bold text-slate-400">作成日: {new Date().toLocaleDateString()}</p>
+              <p className="text-sm font-black text-slate-800 uppercase">Clayette Project</p>
             </div>
           </div>
-
-          <section className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-            <div className="lg:col-span-1 flex flex-col items-center justify-center p-8 bg-orange-600 text-white rounded-[2rem] shadow-xl relative overflow-hidden text-center">
-              <p className="text-[10px] font-bold uppercase tracking-widest mb-4 opacity-80">運営費カバー率</p>
-              <div className="relative w-32 h-32 mx-auto">
-                <svg viewBox="0 0 36 36" className="w-full h-full transform -rotate-90">
-                  <circle cx="18" cy="18" r="16" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="3" />
-                  <circle cx="18" cy="18" r="16" fill="none" stroke="white" strokeWidth="3" strokeDasharray={`${coverageRate} 100`} strokeLinecap="round" />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-4xl font-black leading-none">{coverageRate}<span className="text-sm">%</span></span>
+          <section className="grid grid-cols-1 md:grid-cols-4 gap-6">
+             <div className="md:col-span-1 bg-orange-600 p-8 rounded-[2rem] text-white flex flex-col items-center justify-center text-center">
+                <p className="text-[10px] font-bold uppercase tracking-widest mb-4 opacity-80">Coverage Rate</p>
+                <div className="relative w-32 h-32">
+                  <svg viewBox="0 0 36 36" className="w-full h-full transform -rotate-90">
+                    <circle cx="18" cy="18" r="16" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="3" />
+                    <circle cx="18" cy="18" r="16" fill="none" stroke="white" strokeWidth="3" strokeDasharray={`${coverageRate} 100`} strokeLinecap="round" />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center font-black text-3xl">{coverageRate}%</div>
                 </div>
-              </div>
-            </div>
-            <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="bg-slate-50 p-8 rounded-[2rem] border border-slate-100 text-left">
-                <p className="text-xs font-bold text-slate-400 mb-2 uppercase tracking-widest">Total Sponsorship</p>
-                <p className="text-4xl font-black text-slate-900 tracking-tighter">¥{sponsorship.toLocaleString()}</p>
-                <div className="mt-4 h-1 w-12 bg-orange-500"></div>
-              </div>
-              <div className="bg-slate-50 p-8 rounded-[2rem] border border-slate-100 text-left">
-                <p className="text-xs font-bold text-slate-400 mb-2 uppercase tracking-widest">Benefit Per Child</p>
-                <p className="text-4xl font-black text-orange-600 tracking-tighter">¥{reductionPerStudent.toLocaleString()}</p>
-                <p className="mt-2 text-[10px] font-bold text-slate-500">全{totalStudents}名の受講料を直接軽減</p>
-              </div>
-            </div>
+             </div>
+             <div className="md:col-span-3 grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
+                <div className="bg-slate-50 p-8 rounded-[2rem] border border-slate-100"><p className="text-xs font-bold text-slate-400 mb-2 uppercase">Total Sponsorship</p><p className="text-4xl font-black text-slate-900 tracking-tighter">¥{sponsorship.toLocaleString()}</p></div>
+                <div className="bg-slate-50 p-8 rounded-[2rem] border border-slate-100"><p className="text-xs font-bold text-slate-400 mb-2 uppercase">Benefit per child</p><p className="text-4xl font-black text-orange-600 tracking-tighter">¥{reductionPerStudent.toLocaleString()}</p></div>
+             </div>
           </section>
-
-          <section className="space-y-6 text-left">
-            <div className="flex items-center gap-2 font-bold text-xl text-slate-900 border-l-4 border-orange-500 pl-4">
-              <BarChart3 className="text-orange-600" />
-              資金使途の詳細
-            </div>
-            <div className="bg-slate-50 rounded-[2.5rem] p-8 md:p-12 border border-slate-100 space-y-8">
+          <section className="text-left space-y-6">
+            <div className="flex items-center gap-2 font-bold text-xl border-l-4 border-orange-500 pl-4">資金使途の詳細</div>
+            <div className="bg-slate-50 p-8 rounded-[2rem] space-y-6">
               {Object.entries(costs).map(([key, value]) => {
                 const categoryWeight = totalOperatingCost > 0 ? value / totalOperatingCost : 0;
-                const coveredAmount = sponsorship * categoryWeight;
-                const coverRatio = Math.min(100, value > 0 ? Math.round((coveredAmount / value) * 100) : 0);
+                const coverRatio = Math.min(100, value > 0 ? Math.round((sponsorship * categoryWeight / value) * 100) : 0);
                 return (
                   <div key={key}>
-                    <div className="flex justify-between text-xs mb-2 font-bold text-slate-600">
-                      <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-orange-500"></div> {key}</span>
-                      <span>支援寄与率: {coverRatio}%</span>
-                    </div>
-                    <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
-                      <div className="h-full bg-orange-500 transition-all duration-1000" style={{ width: `${coverRatio}%` }} />
-                    </div>
+                    <div className="flex justify-between text-xs font-bold text-slate-600 mb-2"><span>{key}</span><span>寄与率: {coverRatio}%</span></div>
+                    <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden"><div className="h-full bg-orange-500" style={{ width: `${coverRatio}%` }} /></div>
                   </div>
                 );
               })}
@@ -512,37 +408,24 @@ const App = () => {
     </div>
   );
 
-  // --- ログイン画面の表示 ---
-  if (!currentUser) {
+  // --- ログイン画面 ---
+  if (!currentUser || !currentUser.role) {
     return (
       <div className="min-h-screen bg-orange-50 flex items-center justify-center p-6 text-left">
         <div className="max-w-md w-full bg-white rounded-[2.5rem] shadow-2xl p-10 space-y-8 border border-orange-100 animate-in zoom-in-95 duration-500">
-          <div className="text-center space-y-2">
+          <div className="text-center space-y-2 text-slate-900">
             <div className="bg-orange-600 w-16 h-16 rounded-3xl flex items-center justify-center text-white mx-auto shadow-lg"><Calculator size={32} /></div>
-            <h1 className="text-2xl font-black tracking-tighter text-slate-800 uppercase">Clayette Portal</h1>
-            <p className="text-slate-400 text-[10px] font-bold tracking-[0.3em] uppercase">Education Management System</p>
+            <h1 className="text-2xl font-black tracking-tighter uppercase">Clayette Portal</h1>
+            <p className="text-slate-400 text-[10px] font-bold tracking-[0.3em] uppercase">Academic Management System</p>
           </div>
           <form onSubmit={handleLogin} className="space-y-6 text-left">
             <div className="space-y-4">
-              <div>
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Login ID</label>
-                <div className="relative">
-                  <input type="text" value={loginId} onChange={e => setLoginId(e.target.value)} required className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-orange-500 outline-none" />
-                  <Users className="absolute right-4 top-3.5 text-slate-300" size={16} />
-                </div>
-              </div>
-              <div>
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Password</label>
-                <div className="relative">
-                  <input type="password" value={password} onChange={e => setPassword(e.target.value)} required className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-orange-500 outline-none" />
-                  <Key className="absolute right-4 top-3.5 text-slate-300" size={16} />
-                </div>
-              </div>
+              <div className="text-left"><label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Login ID</label><input type="text" value={loginId} onChange={e => setLoginId(e.target.value)} required className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-orange-500 outline-none text-left" /></div>
+              <div className="text-left"><label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Password</label><input type="password" value={password} onChange={e => setPassword(e.target.value)} required className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-orange-500 outline-none text-left" /></div>
             </div>
             {authError && <p className="text-rose-500 text-[10px] font-bold text-center bg-rose-50 py-2 rounded-xl">{authError}</p>}
-            <button type="submit" className="w-full bg-orange-600 text-white font-black py-4 rounded-2xl shadow-xl hover:bg-orange-700 flex items-center justify-center gap-2 transition-all active:scale-95"><LogIn size={18} /> ログイン</button>
+            <button type="submit" className="w-full bg-orange-600 text-white font-black py-4 rounded-2xl shadow-xl hover:bg-orange-700 transition-all active:scale-95">ログイン</button>
           </form>
-          <p className="text-center text-[10px] text-slate-300 font-bold uppercase">Authorized Access Only</p>
         </div>
       </div>
     );
@@ -550,8 +433,7 @@ const App = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900 text-left overflow-x-hidden flex flex-col">
-      {/* 共通ナビゲーション */}
-      <nav className="bg-white border-b border-slate-200 sticky top-0 z-40 px-4 shrink-0">
+      <nav className="bg-white border-b border-slate-200 sticky top-0 z-40 px-4 shrink-0 shadow-sm">
         <div className="max-w-6xl mx-auto flex items-center justify-between h-16">
           <div className="flex items-center gap-3">
             <div className="bg-orange-600 p-2 rounded-xl text-white shadow-lg"><Calculator size={18} /></div>
@@ -561,651 +443,233 @@ const App = () => {
             <div className="flex gap-1 bg-slate-100 p-1 rounded-xl">
               {currentUser.role === 'admin' ? (
                 <>
-                  <button onClick={() => setActiveTab('dashboard')} className={`px-2 md:px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'dashboard' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500'}`}>分析</button>
-                  <button onClick={() => setActiveTab('students')} className={`px-2 md:px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'students' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500'}`}>生徒管理</button>
-                  <button onClick={() => setActiveTab('sponsors')} className={`px-2 md:px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'sponsors' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500'}`}>協賛企業</button>
-                  <button onClick={() => setActiveTab('materials')} className={`px-2 md:px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'materials' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500'}`}>教材管理</button>
-                  <button onClick={() => setActiveTab('notices')} className={`px-2 md:px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'notices' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500'}`}>お知らせ</button>
+                  <button onClick={() => setActiveTab('dashboard')} className={`px-2 md:px-4 py-1.5 rounded-lg text-[10px] md:text-xs font-bold transition-all ${activeTab === 'dashboard' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500'}`}>分析</button>
+                  <button onClick={() => setActiveTab('students')} className={`px-2 md:px-4 py-1.5 rounded-lg text-[10px] md:text-xs font-bold transition-all ${activeTab === 'students' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500'}`}>生徒管理</button>
+                  <button onClick={() => setActiveTab('sponsors')} className={`px-2 md:px-4 py-1.5 rounded-lg text-[10px] md:text-xs font-bold transition-all ${activeTab === 'sponsors' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500'}`}>協賛企業</button>
+                  <button onClick={() => setActiveTab('materials')} className={`px-2 md:px-4 py-1.5 rounded-lg text-[10px] md:text-xs font-bold transition-all ${activeTab === 'materials' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500'}`}>教材管理</button>
+                  <button onClick={() => setActiveTab('notices')} className={`px-2 md:px-4 py-1.5 rounded-lg text-[10px] md:text-xs font-bold transition-all ${activeTab === 'notices' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500'}`}>お知らせ</button>
                 </>
               ) : (
                 <>
-                  <button onClick={() => setActiveTab('mypage')} className={`px-2 md:px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'mypage' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500'}`}>マイページ</button>
-                  <button onClick={() => setActiveTab('materials')} className={`px-2 md:px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'materials' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500'}`}>教材一覧</button>
+                  <button onClick={() => setActiveTab('mypage')} className={`px-2 md:px-4 py-1.5 rounded-lg text-[10px] md:text-xs font-bold transition-all ${activeTab === 'mypage' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500'}`}>マイページ</button>
+                  <button onClick={() => setActiveTab('materials')} className={`px-2 md:px-4 py-1.5 rounded-lg text-[10px] md:text-xs font-bold transition-all ${activeTab === 'materials' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500'}`}>教材一覧</button>
                 </>
               )}
             </div>
-            <button onClick={handleLogout} className="text-slate-400 hover:text-rose-600 transition-colors"><LogOut size={20} /></button>
+            <button onClick={handleLogout} className="text-slate-400 hover:text-rose-600 transition-colors ml-2"><LogOut size={20} /></button>
           </div>
         </div>
       </nav>
 
-      {/* メインコンテンツエリア */}
-      <main className="flex-grow max-w-6xl w-full mx-auto p-4 md:p-8 space-y-8">
+      <main className="flex-grow max-w-6xl w-full mx-auto p-4 md:p-8 space-y-8 text-left text-slate-900">
+        {saveMessage && <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-bounce"><CheckCircle2 size={18} className="text-emerald-400" /><span className="text-sm font-bold">{saveMessage}</span></div>}
 
-        {saveMessage && (
-          <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-bounce">
-            <CheckCircle2 size={18} className="text-emerald-400" />
-            <span className="text-sm font-bold">{saveMessage}</span>
-          </div>
-        )}
-
-        {/* --- 共通: お知らせ通知 --- */}
-        {currentUser.role !== 'admin' && announcements.length > 0 && (
-          <div className="bg-orange-600 text-white p-4 rounded-[1.5rem] shadow-xl flex items-start gap-4 animate-in slide-in-from-top-4 duration-700">
-            <div className="bg-white/20 p-2 rounded-xl shrink-0"><Megaphone size={20} /></div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-0.5">Notification</p>
-              <h4 className="font-black text-sm truncate">{announcements[0].title}</h4>
-              <p className="text-xs mt-1 font-medium text-orange-50 line-clamp-2">{announcements[0].content}</p>
-            </div>
-            {announcements[0].type === 'emergency' && <div className="bg-rose-500 px-2 py-1 rounded-lg text-[10px] font-black animate-pulse">重要</div>}
-          </div>
-        )}
-
-        {/* 1. 管理者: ダッシュボード & シミュレーター */}
+        {/* 分析/ダッシュボード */}
         {currentUser.role === 'admin' && activeTab === 'dashboard' && (
-          <div className="space-y-8 animate-in fade-in duration-500">
-            <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div className="text-left">
-                <h2 className="text-2xl font-black text-slate-800 tracking-tight">受講料・協賛金分析</h2>
-                <p className="text-slate-400 text-sm font-medium">運営コストと社会貢献インパクトの最大化</p>
-              </div>
-              <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-                <div className="flex flex-1 items-center bg-white border border-slate-200 rounded-xl px-2 gap-2">
-                  <input type="month" value={recordMonth} onChange={(e) => setRecordMonth(e.target.value)} className="py-2 text-xs font-bold bg-transparent outline-none flex-1 min-w-[100px]" />
-                  <button onClick={recordMonthlyStatus} disabled={isRecording} className="bg-orange-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold shrink-0">月次保存</button>
-                </div>
-                <button onClick={() => setShowReport(true)} className="flex-1 sm:flex-none bg-slate-900 text-white px-5 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-orange-600 transition-all shadow-lg"><FileText size={18} /> 報告書</button>
+          <div className="space-y-8 animate-in fade-in duration-500 text-left">
+            <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-left">
+              <div className="text-left"><h2 className="text-2xl font-black tracking-tight">受講料・協賛金分析</h2><p className="text-slate-400 text-sm font-medium">運営コストと支援インパクトの統合</p></div>
+              <div className="flex gap-2">
+                 <button onClick={() => setShowReport(true)} className="bg-orange-600 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:scale-105 transition-all shadow-lg shadow-orange-100"><FileText size={18} /> 報告書作成</button>
+                 <div className="bg-white border border-slate-200 rounded-xl px-2 flex items-center gap-2"><input type="month" value={recordMonth} onChange={e=>setRecordMonth(e.target.value)} className="py-2 text-xs font-bold outline-none bg-transparent" /><button onClick={recordMonthlyStatus} className="text-[10px] font-black text-orange-600 px-2 uppercase tracking-tighter">月次保存</button></div>
               </div>
             </header>
-
             <TrendChart />
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-              <div className="space-y-6">
-                {/* 運営コスト設定 */}
-                <div className="bg-white rounded-3xl border border-slate-200 p-6 space-y-4">
-                  <div className="flex items-center gap-2 font-bold text-slate-700 text-xs uppercase tracking-widest"><Settings2 size={14} className="text-orange-500" /> 月間コスト設定</div>
-                  {Object.entries(costs).map(([key, value]) => (
-                    <div key={key}>
-                      <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">{key}</label>
-                      <input type="number" value={value} onChange={(e) => handleCostChange(key, e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold focus:ring-2 focus:ring-orange-500 outline-none" />
-                    </div>
-                  ))}
-                  <div className="pt-4 border-t border-dashed flex justify-between items-center"><span className="text-[10px] font-bold text-slate-400 uppercase">Total Cost</span><span className="text-lg font-black text-orange-600">¥{totalOperatingCost.toLocaleString()}</span></div>
-                </div>
-
-                {/* バッファ設定 */}
-                <div className="bg-orange-600 text-white rounded-3xl p-6 space-y-4 shadow-xl">
-                  <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-widest opacity-80"><ShieldCheck size={14} /> 協賛金バッファ設定</div>
-                  <p className="text-[10px] text-orange-100 font-medium">コースA({COURSE_BASES[0].price.toLocaleString()}円)の生徒何人分の資金を予備費にしますか？</p>
-                  <input type="range" min="0" max="20" step="1" value={bufferStudentTarget} onChange={(e) => setBufferStudentTarget(parseInt(e.target.value))} className="w-full h-1.5 bg-orange-400 rounded-full appearance-none cursor-pointer accent-white" />
-                  <div className="flex justify-between items-center font-black">
-                    <span className="text-[10px]">現在: {bufferStudentTarget}名分</span>
-                    <span className="text-lg">¥{bufferAmount.toLocaleString()}</span>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 text-left items-start">
+               <div className="space-y-6">
+                  <div className="bg-white rounded-3xl border border-slate-200 p-6 space-y-4">
+                     <div className="flex items-center gap-2 font-bold text-slate-700 text-xs uppercase tracking-widest"><Settings2 size={14} className="text-orange-500" /> 月間コスト</div>
+                     {Object.entries(costs).map(([key, value]) => (
+                        <div key={key}><label className="text-[10px] font-bold text-slate-400 block mb-1 uppercase tracking-widest">{key}</label><input type="number" value={value} onChange={e=>handleCostChange(key, e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold" /></div>
+                     ))}
+                     <div className="pt-4 border-t border-dashed flex justify-between font-black"><span className="text-xs text-slate-400 uppercase tracking-widest">Total</span><span className="text-orange-600">¥{totalOperatingCost.toLocaleString()}</span></div>
                   </div>
-                </div>
-              </div>
-
-              <div className="lg:col-span-2 space-y-6">
-                {/* 協賛金スライダー */}
-                <div className="bg-white rounded-3xl border border-slate-200 p-8 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 p-4 opacity-5"><Coins size={120} /></div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase mb-2">Current Total Sponsorship</p>
-                  <p className="text-5xl font-black text-orange-600 tracking-tighter mb-8">¥{sponsorship.toLocaleString()}</p>
-                  <input type="range" min="0" max="2000000" step="10000" value={sponsorship} onChange={(e) => setSponsorship(parseInt(e.target.value))} className="w-full h-3 bg-slate-100 rounded-full appearance-none cursor-pointer accent-orange-600 shadow-inner" />
-                </div>
-
-                {/* 還元インパクト */}
-                <div className="bg-orange-600 rounded-[2.5rem] p-8 md:p-10 text-white flex flex-col sm:flex-row items-center justify-between gap-8 shadow-2xl shadow-orange-100">
-                  <div>
-                    <p className="text-orange-100 text-[10px] font-bold uppercase mb-4 tracking-widest">一律月額引き下げ額 (1,000円ステップ)</p>
-                    <div className="flex items-center gap-4">
-                      <ArrowDownCircle size={48} className="text-orange-200 animate-bounce-slow" />
-                      <span className="text-6xl md:text-7xl font-black tracking-tighter">¥{reductionPerStudent.toLocaleString()}</span>
-                    </div>
+                  <div className="bg-orange-600 text-white rounded-3xl p-6 space-y-4 shadow-xl text-left">
+                     <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-widest opacity-80"><ShieldCheck size={14} /> 予備費設定</div>
+                     <input type="range" min="0" max="20" step="1" value={bufferStudentTarget} onChange={e=>setBufferStudentTarget(parseInt(e.target.value))} className="w-full h-1.5 bg-orange-400 rounded-full appearance-none accent-white cursor-pointer" />
+                     <div className="flex justify-between font-black"><span className="text-[10px]">確保: {bufferStudentTarget}名分</span><span className="text-lg">¥{bufferAmount.toLocaleString()}</span></div>
                   </div>
-                  <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-[2rem] p-6 text-center min-w-[140px]">
-                    <p className="text-[10px] font-bold mb-1 opacity-80 uppercase tracking-widest">Coverage</p>
-                    <p className="text-4xl font-black">{coverageRate}%</p>
+               </div>
+               <div className="lg:col-span-2 space-y-6">
+                  <div className="bg-white rounded-3xl border border-slate-200 p-8 relative overflow-hidden shadow-sm">
+                     <div className="absolute top-0 right-0 p-4 opacity-5"><Coins size={120} /></div>
+                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Calculated Total Sponsorship</p>
+                     <p className="text-5xl font-black text-orange-600 tracking-tighter">¥{sponsorship.toLocaleString()}</p>
+                     <p className="text-[10px] text-slate-400 font-bold mt-4 italic">※協賛企業管理タブのデータから自動算出</p>
                   </div>
-                </div>
-
-                {/* 追加受入枠 */}
-                <div className="bg-white rounded-3xl border border-slate-200 p-6">
-                  <div className="flex items-center gap-2 mb-6 font-bold text-slate-700 text-sm">
-                    <UserPlus className="text-orange-500 w-5 h-5" /> 現在の追加受入可能枠
+                  <div className="bg-orange-600 rounded-[2.5rem] p-10 text-white flex flex-col sm:flex-row items-center justify-between gap-6 shadow-2xl shadow-orange-100">
+                    <div className="text-left text-white"><p className="text-orange-100 text-[10px] font-bold uppercase mb-4 tracking-[0.2em]">一律月額削減額 (1,000円ステップ)</p><div className="flex items-center gap-4"><ArrowDownCircle size={48} className="text-orange-200 animate-bounce-slow" /><span className="text-6xl md:text-7xl font-black tracking-tighter">¥{reductionPerStudent.toLocaleString()}</span></div></div>
+                    <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-[2rem] p-6 text-center min-w-[140px]"><p className="text-[10px] font-bold mb-1 opacity-80 uppercase tracking-widest text-center">Coverage</p><p className="text-4xl font-black text-center">{coverageRate}%</p></div>
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {capacityPerCourse.map(c => (
-                      <div key={c.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-100 text-center transition-all hover:border-orange-200">
-                        <p className="text-[10px] text-slate-400 font-bold mb-1 truncate">{c.label}</p>
-                        <p className="text-2xl font-black text-slate-800">+{c.count}<span className="text-[10px] ml-0.5">名</span></p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 管理者用コメント欄（最新投稿へのフィードバック） */}
-                <div className="mt-12 space-y-6 text-left">
-                  <h3 className="text-xl font-black text-slate-800 flex items-center gap-3"><MessageSquare className="text-orange-500" /> 学習記録へのフィードバック</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {learningRecords.slice(0, 4).map(record => (
-                      <div key={record.id} className="bg-white p-6 rounded-3xl border border-slate-200 space-y-4 shadow-sm group">
-                        <div className="flex justify-between items-start min-w-0">
-                          <div className="min-w-0 flex-1">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest truncate">{record.studentName} | {new Date(record.date).toLocaleDateString()}</p>
-                            <h4 className="font-black text-slate-800 truncate">{record.title}</h4>
-                          </div>
-                        </div>
-                        <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">{record.content}</p>
-                        <div className="pt-4 border-t border-slate-50 flex gap-2">
-                          <input
-                            type="text"
-                            defaultValue={record.comment}
-                            onBlur={(e) => setAdminComment({ ...adminComment, [record.id]: e.target.value })}
-                            className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs font-bold outline-none focus:bg-white"
-                            placeholder="コメントを入力..."
-                          />
-                          <button onClick={() => submitAdminComment(record.id)} className="bg-slate-900 text-white p-2 rounded-xl hover:bg-orange-600 transition-all"><ChevronRight size={18} /></button>
-                        </div>
-                      </div>
-                    ))}
-                    {learningRecords.length === 0 && <div className="md:col-span-2 py-10 bg-slate-50 rounded-3xl border border-dashed border-slate-200 text-center text-slate-400 text-sm font-bold">まだ学習記録の投稿はありません</div>}
-                  </div>
-                </div>
-              </div>
+               </div>
             </div>
           </div>
         )}
 
-        {/* 2. 管理者: 生徒管理 */}
+        {/* 生徒管理 */}
         {currentUser.role === 'admin' && activeTab === 'students' && (
-          <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
-            <header className="text-left"><h2 className="text-2xl font-black text-slate-800 tracking-tight">生徒・保護者アカウント管理</h2></header>
-
+          <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500 text-left">
+            <header className="text-left"><h2 className="text-2xl font-black tracking-tight">生徒・保護者管理</h2></header>
             {generatedCreds && (
               <div className="bg-slate-900 text-white p-6 rounded-3xl shadow-2xl space-y-4 border-2 border-orange-500 animate-in zoom-in-95 duration-300">
-                <div className="flex items-center gap-3 text-orange-400 font-bold"><Key size={20} /> <span>アカウントを発行しました: {generatedCreds.name}様</span></div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-white/10 p-4 rounded-2xl border border-white/10">
-                    <p className="text-[10px] font-bold text-orange-300 uppercase mb-2">生徒用ログイン情報</p>
-                    <p className="text-sm font-bold tracking-widest select-all">ID: {generatedCreds.student.id} / PW: {generatedCreds.student.pw}</p>
-                  </div>
-                  <div className="bg-white/10 p-4 rounded-2xl border border-white/10">
-                    <p className="text-[10px] font-bold text-orange-300 uppercase mb-2">保護者用ログイン情報</p>
-                    <p className="text-sm font-bold tracking-widest select-all">ID: {generatedCreds.parent.id} / PW: {generatedCreds.parent.pw}</p>
-                  </div>
+                <div className="flex items-center gap-3 text-orange-400 font-bold"><Key size={20} /> <span>アカウント発行: {generatedCreds.name}様</span></div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left font-mono">
+                  <div className="bg-white/10 p-4 rounded-2xl"><p className="text-[10px] font-bold text-orange-300 mb-2 uppercase">生徒用</p><p className="text-sm">ID: {generatedCreds.student.id} / PW: {generatedCreds.student.pw}</p></div>
+                  <div className="bg-white/10 p-4 rounded-2xl"><p className="text-[10px] font-bold text-orange-300 mb-2 uppercase">保護者用</p><p className="text-sm">ID: {generatedCreds.parent.id} / PW: {generatedCreds.parent.pw}</p></div>
                 </div>
-                <p className="text-[9px] text-slate-400 text-center">※この情報は一度閉じると再表示できません。必ずメモを控えてください。</p>
-                <button onClick={() => setGeneratedCreds(null)} className="w-full bg-orange-600 text-xs font-black py-2 rounded-xl transition-all hover:bg-orange-700 uppercase tracking-[0.2em]">内容を確認して閉じる</button>
+                <button onClick={()=>setGeneratedCreds(null)} className="w-full bg-orange-600 py-2 rounded-xl text-xs font-black uppercase tracking-widest">閉じる</button>
               </div>
             )}
-
-            <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
-              <div className="xl:col-span-1 bg-white rounded-3xl border border-slate-200 p-6 h-fit sticky top-24">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">{editingStudent ? '生徒情報を編集' : '新規受講生を登録'}</h3>
-                <form onSubmit={saveStudent} className="space-y-4">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">氏名</label>
-                    <input type="text" required value={studentForm.name} onChange={e => setStudentForm({ ...studentForm, name: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold" />
-                  </div>
+            <div className="grid grid-cols-1 xl:grid-cols-4 gap-8 items-start text-left text-slate-900">
+              <div className="xl:col-span-1 bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">生徒登録</h3>
+                <form onSubmit={saveStudent} className="space-y-5 text-left">
+                  <div><label className="text-[10px] font-bold text-slate-400 uppercase ml-1 tracking-widest text-left block mb-1">生徒名</label><input type="text" required value={studentForm.name} onChange={e=>setStudentForm({...studentForm, name:e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm font-bold" /></div>
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">学校</label>
-                      <input type="text" value={studentForm.school} onChange={e => setStudentForm({ ...studentForm, school: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold" />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">年齢</label>
-                      <input type="number" value={studentForm.age} onChange={e => setStudentForm({ ...studentForm, age: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold" />
-                    </div>
+                    <div><label className="text-[10px] font-bold text-slate-400 uppercase text-left block mb-1">学校</label><input type="text" value={studentForm.school} onChange={e=>setStudentForm({...studentForm, school:e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm font-bold" /></div>
+                    <div><label className="text-[10px] font-bold text-slate-400 uppercase text-left block mb-1">年齢</label><input type="number" value={studentForm.age} onChange={e=>setStudentForm({...studentForm, age:e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm font-bold" /></div>
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">次回の授業日</label>
-                    <input type="date" value={studentForm.nextClassDate} onChange={e => setStudentForm({ ...studentForm, nextClassDate: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold outline-none" />
+                  <div><label className="text-[10px] font-bold text-slate-400 uppercase text-left block mb-1">次回の授業日</label><input type="date" value={studentForm.nextClassDate} onChange={e=>setStudentForm({...studentForm, nextClassDate:e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm font-bold" /></div>
+                  
+                  <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-4">
+                    <div className="flex justify-between items-center"><span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Login Credentials</span><button type="button" onClick={fillCredentials} className="text-[9px] bg-slate-200 px-2 py-1 rounded font-black text-slate-500 uppercase tracking-widest hover:bg-slate-300">Auto Fill</button></div>
+                    <div className="grid grid-cols-1 gap-2"><input type="text" placeholder="生徒用ID" value={studentForm.studentLoginId} onChange={e=>setStudentForm({...studentForm, studentLoginId:e.target.value})} className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs font-bold" /><input type="text" placeholder="生徒用PW" value={studentForm.studentPassword} onChange={e=>setStudentForm({...studentForm, studentPassword:e.target.value})} className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs font-bold" /><input type="text" placeholder="保護者用ID" value={studentForm.parentLoginId} onChange={e=>setStudentForm({...studentForm, parentLoginId:e.target.value})} className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs font-bold" /><input type="text" placeholder="保護者用PW" value={studentForm.parentPassword} onChange={e=>setStudentForm({...studentForm, parentPassword:e.target.value})} className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs font-bold" /></div>
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">受講プラン</label>
-                    <select value={studentForm.courseId} onChange={e => setStudentForm({ ...studentForm, courseId: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold outline-none appearance-none">
-                      {COURSE_BASES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
-                    </select>
-                  </div>
-
-                  {/* ID/PW Manual Entry Section */}
-                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase">ログイン情報設定 (任意)</span>
-                      <button type="button" onClick={fillCredentials} className="text-[10px] bg-slate-200 px-2 py-1 rounded text-slate-600 hover:bg-slate-300 font-bold">自動生成</button>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="text-[9px] font-bold text-slate-400 block mb-1">生徒ID</label>
-                        <input type="text" value={studentForm.studentLoginId} onChange={e => setStudentForm({ ...studentForm, studentLoginId: e.target.value })} className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs font-bold" />
-                      </div>
-                      <div>
-                        <label className="text-[9px] font-bold text-slate-400 block mb-1">生徒PW</label>
-                        <input type="text" value={studentForm.studentPassword} onChange={e => setStudentForm({ ...studentForm, studentPassword: e.target.value })} className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs font-bold" />
-                      </div>
-                      <div>
-                        <label className="text-[9px] font-bold text-slate-400 block mb-1">保護者ID</label>
-                        <input type="text" value={studentForm.parentLoginId} onChange={e => setStudentForm({ ...studentForm, parentLoginId: e.target.value })} className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs font-bold" />
-                      </div>
-                      <div>
-                        <label className="text-[9px] font-bold text-slate-400 block mb-1">保護者PW</label>
-                        <input type="text" value={studentForm.parentPassword} onChange={e => setStudentForm({ ...studentForm, parentPassword: e.target.value })} className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs font-bold" />
-                      </div>
-                    </div>
-                  </div>
-                  <button type="submit" className="w-full bg-orange-600 text-white font-black py-4 rounded-xl shadow-lg hover:bg-orange-700 transition-all flex items-center justify-center gap-2 active:scale-95">
-                    {editingStudent ? <Edit2 size={18} /> : <UserPlus size={18} />}
-                    {editingStudent ? '保存する' : 'ID発行と登録'}
-                  </button>
+                  
+                  <button type="submit" className="w-full bg-orange-600 text-white font-black py-4 rounded-xl shadow-lg hover:bg-orange-700 transition-all flex items-center justify-center gap-2 active:scale-95 text-sm uppercase tracking-widest">{editingStudent ? 'UPDATE' : 'REGISTER'}</button>
                 </form>
               </div>
-
               <div className="xl:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-4">
                 {students.map(s => (
-                  <div key={s.id} className="bg-white p-6 rounded-3xl border border-slate-200 group hover:border-orange-500 transition-all flex flex-col justify-between shadow-sm relative overflow-hidden text-left">
-                    <div className="absolute top-0 right-0 p-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                      <button onClick={() => { setEditingStudent(s); setStudentForm(s); window.scrollTo(0, 0); }} className="p-2 bg-slate-50 text-slate-400 hover:text-orange-600 rounded-lg"><Edit2 size={14} /></button>
-                      <button onClick={async () => { if (window.confirm('削除しますか？')) { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'students', s.id)); } }} className="p-2 bg-slate-50 text-slate-400 hover:text-rose-500 rounded-lg"><Trash2 size={14} /></button>
-                    </div>
-                    <div>
-                      <h4 className="font-black text-xl text-slate-800">{s.name}</h4>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{s.school} | {s.age}歳</p>
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        <div className="bg-orange-50 px-3 py-1 rounded-full text-orange-600 text-[10px] font-black border border-orange-100 flex items-center gap-1.5"><Clock size={10} /> 次回: {s.nextClassDate || '未設定'}</div>
-                        <div className="bg-slate-50 px-3 py-1 rounded-full text-slate-500 text-[10px] font-black border border-slate-100">{COURSE_BASES.find(c => c.id === s.courseId)?.label}</div>
-                      </div>
-                    </div>
-                    <div className="mt-6 pt-4 border-t border-slate-50 grid grid-cols-2 gap-2 text-[10px] font-bold">
-                      <div className="text-slate-400">生徒ID: <span className="text-slate-900 select-all">{s.studentLoginId}</span></div>
-                      <div className="text-slate-400">保護者ID: <span className="text-slate-900 select-all">{s.parentLoginId}</span></div>
-                    </div>
+                  <div key={s.id} className="bg-white p-6 rounded-3xl border border-slate-200 flex flex-col justify-between shadow-sm relative group hover:border-orange-300 transition-all text-left">
+                    <div className="absolute top-0 right-0 p-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-all"><button onClick={()=>{setEditingStudent(s); setStudentForm(s); window.scrollTo(0,0);}} className="p-2 bg-slate-50 text-slate-400 hover:text-orange-600 rounded-lg"><Edit2 size={14}/></button><button onClick={async()=>{if(window.confirm('削除？')){await deleteDoc(doc(db,'artifacts',appId,'public', 'data', 'students',s.id));}}} className="p-2 bg-slate-50 text-slate-400 hover:text-rose-500 rounded-lg"><Trash2 size={14}/></button></div>
+                    <div className="text-left"><h4 className="font-black text-xl text-slate-800 text-left">{s.name}</h4><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-left">{s.school} | {s.age}歳</p></div>
+                    <div className="mt-6 pt-4 border-t border-slate-50 flex justify-between text-[10px] font-bold text-slate-400 uppercase tracking-tighter"><span>ID: {s.studentLoginId}</span><span>P-ID: {s.parentLoginId}</span></div>
                   </div>
                 ))}
-                {students.length === 0 && <div className="md:col-span-2 py-20 bg-white rounded-3xl border border-dashed border-slate-200 text-center"><p className="text-slate-400 font-bold">生徒が登録されていません</p></div>}
               </div>
             </div>
           </div>
         )}
 
-        {/* 5. 管理者: 協賛企業管理 */}
+        {/* 協賛企業管理 */}
         {currentUser.role === 'admin' && activeTab === 'sponsors' && (
-          <div className="space-y-8 animate-in fade-in duration-500">
-            <header className="text-left"><h2 className="text-2xl font-black text-slate-800 tracking-tight">協賛企業管理</h2></header>
-            <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
-              <div className="xl:col-span-1 bg-white rounded-3xl border border-slate-200 p-6 h-fit sticky top-24">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">{editingSponsor ? '企業情報を編集' : '新規企業を登録'}</h3>
-                <form onSubmit={saveSponsor} className="space-y-4">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">会社名</label>
-                    <input type="text" required value={sponsorForm.name} onChange={e => setSponsorForm({ ...sponsorForm, name: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">担当者名</label>
-                    <input type="text" value={sponsorForm.repName} onChange={e => setSponsorForm({ ...sponsorForm, repName: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">メールアドレス</label>
-                    <input type="email" value={sponsorForm.email} onChange={e => setSponsorForm({ ...sponsorForm, email: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">月額協賛金額 (円)</label>
-                    <input type="number" required value={sponsorForm.amount} onChange={e => setSponsorForm({ ...sponsorForm, amount: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold" />
-                  </div>
-                  <button type="submit" className="w-full bg-orange-600 text-white font-black py-4 rounded-xl shadow-lg hover:bg-orange-700 transition-all flex items-center justify-center gap-2 active:scale-95">
-                    {editingSponsor ? <Edit2 size={18} /> : <Plus size={18} />}
-                    {editingSponsor ? '更新する' : '登録する'}
-                  </button>
-                  {editingSponsor && (
-                    <button type="button" onClick={() => { setEditingSponsor(null); setSponsorForm({ name: '', repName: '', email: '', amount: '' }); }} className="w-full bg-slate-100 text-slate-500 font-bold py-3 rounded-xl hover:bg-slate-200 transition-all flex items-center justify-center gap-2">キャンセル</button>
-                  )}
+          <div className="space-y-8 animate-in fade-in duration-500 text-left">
+            <header className="text-left"><h2 className="text-2xl font-black tracking-tight text-left text-slate-800">協賛企業管理</h2></header>
+            <div className="grid grid-cols-1 xl:grid-cols-4 gap-8 text-left items-start">
+              <div className="xl:col-span-1 bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">企業登録</h3>
+                <form onSubmit={saveSponsor} className="space-y-4 text-left">
+                  <div className="space-y-1"><label className="text-[10px] font-bold text-slate-400 uppercase ml-1">会社名</label><input type="text" required value={sponsorForm.name} onChange={e=>setSponsorForm({...sponsorForm, name:e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold" /></div>
+                  <div className="space-y-1"><label className="text-[10px] font-bold text-slate-400 uppercase ml-1">担当者</label><input type="text" value={sponsorForm.repName} onChange={e=>setSponsorForm({...sponsorForm, repName:e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold" /></div>
+                  <div className="space-y-1"><label className="text-[10px] font-bold text-slate-400 uppercase ml-1">月額支援額</label><input type="number" required value={sponsorForm.amount} onChange={e=>setSponsorForm({...sponsorForm, amount:e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-orange-600" /></div>
+                  <button type="submit" className="w-full bg-orange-600 text-white font-black py-4 rounded-xl shadow-lg hover:bg-orange-700 transition-all uppercase tracking-widest text-sm">{editingSponsor ? 'UPDATE' : 'ADD SPONSOR'}</button>
                 </form>
               </div>
               <div className="xl:col-span-3 space-y-4">
-                <div className="flex justify-between items-end mb-2 px-2">
-                  <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">Registered Sponsors</p>
-                  <p className="text-slate-800 font-black text-xl">Total: ¥{sponsorship.toLocaleString()}<span className="text-xs text-slate-400 ml-1 font-bold">/ Month</span></p>
-                </div>
+                <div className="flex justify-between items-end mb-2 px-2 text-slate-800"><p className="text-xs font-bold uppercase tracking-widest opacity-40">Registered Partners</p><p className="font-black text-xl">Total: ¥{sponsorship.toLocaleString()}</p></div>
                 {sponsors.map(s => (
-                  <div key={s.id} className="bg-white p-6 rounded-3xl border border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 group hover:border-orange-300 transition-all shadow-sm">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <Building className="text-orange-500" size={16} />
-                        <h4 className="font-black text-lg text-slate-800">{s.name}</h4>
-                      </div>
-                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs font-bold text-slate-500">
-                        <span className="flex items-center gap-1"><UserPlus size={12} /> {s.repName || '担当者未登録'}</span>
-                        <span className="flex items-center gap-1"><Mail size={12} /> {s.email || 'Mail未登録'}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end">
-                      <p className="text-xl font-black text-orange-600">¥{parseInt(s.amount).toLocaleString()}</p>
-                      <div className="flex gap-2">
-                        <button onClick={() => { setEditingSponsor(s); setSponsorForm(s); window.scrollTo(0, 0); }} className="p-2 bg-slate-50 text-slate-400 hover:text-orange-600 rounded-lg"><Edit2 size={16} /></button>
-                        <button onClick={() => deleteSponsor(s.id)} className="p-2 bg-slate-50 text-slate-400 hover:text-rose-500 rounded-lg"><Trash2 size={16} /></button>
-                      </div>
-                    </div>
+                  <div key={s.id} className="bg-white p-6 rounded-3xl border border-slate-200 flex flex-col md:flex-row justify-between items-center group hover:border-orange-300 transition-all text-left shadow-sm">
+                    <div className="text-left w-full"><div className="flex items-center gap-2 mb-1"><Building className="text-orange-500" size={16} /><h4 className="font-black text-lg text-slate-800">{s.name}</h4></div><p className="text-xs text-slate-400 font-bold uppercase tracking-widest">{s.repName || 'No contact specified'}</p></div>
+                    <div className="flex items-center gap-6 shrink-0 w-full md:w-auto justify-between md:justify-end mt-4 md:mt-0"><p className="text-xl font-black text-orange-600">¥{Number(s.amount).toLocaleString()}</p><div className="flex gap-2"><button onClick={()=>{setEditingSponsor(s); setSponsorForm(s); window.scrollTo(0,0);}} className="p-2 text-slate-400 hover:text-orange-600"><Edit2 size={16}/></button><button onClick={()=>deleteSponsor(s.id)} className="p-2 text-slate-400 hover:text-rose-500"><Trash2 size={16}/></button></div></div>
                   </div>
                 ))}
-                {sponsors.length === 0 && <div className="py-20 bg-white rounded-3xl border border-dashed border-slate-200 text-center"><p className="text-slate-400 font-bold">協賛企業が登録されていません</p></div>}
               </div>
             </div>
           </div>
         )}
 
-        {/* 5. 管理者: 協賛企業管理 */}
-        {currentUser.role === 'admin' && activeTab === 'sponsors' && (
-          <div className="space-y-8 animate-in fade-in duration-500">
-            <header className="text-left"><h2 className="text-2xl font-black text-slate-800 tracking-tight">協賛企業管理</h2></header>
-            <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
-              <div className="xl:col-span-1 bg-white rounded-3xl border border-slate-200 p-6 h-fit sticky top-24">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">{editingSponsor ? '企業情報を編集' : '新規企業を登録'}</h3>
-                <form onSubmit={saveSponsor} className="space-y-4">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">会社名</label>
-                    <input type="text" required value={sponsorForm.name} onChange={e => setSponsorForm({ ...sponsorForm, name: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">担当者名</label>
-                    <input type="text" value={sponsorForm.repName} onChange={e => setSponsorForm({ ...sponsorForm, repName: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">メールアドレス</label>
-                    <input type="email" value={sponsorForm.email} onChange={e => setSponsorForm({ ...sponsorForm, email: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">月額協賛金額 (円)</label>
-                    <input type="number" required value={sponsorForm.amount} onChange={e => setSponsorForm({ ...sponsorForm, amount: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold" />
-                  </div>
-                  <button type="submit" className="w-full bg-orange-600 text-white font-black py-4 rounded-xl shadow-lg hover:bg-orange-700 transition-all flex items-center justify-center gap-2 active:scale-95">
-                    {editingSponsor ? <Edit2 size={18} /> : <Plus size={18} />}
-                    {editingSponsor ? '更新する' : '登録する'}
-                  </button>
-                  {editingSponsor && (
-                    <button type="button" onClick={() => { setEditingSponsor(null); setSponsorForm({ name: '', repName: '', email: '', amount: '' }); }} className="w-full bg-slate-100 text-slate-500 font-bold py-3 rounded-xl hover:bg-slate-200 transition-all flex items-center justify-center gap-2">キャンセル</button>
-                  )}
-                </form>
-              </div>
-              <div className="xl:col-span-3 space-y-4">
-                <div className="flex justify-between items-end mb-2 px-2">
-                  <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">Registered Sponsors</p>
-                  <p className="text-slate-800 font-black text-xl">Total: ¥{sponsorship.toLocaleString()}<span className="text-xs text-slate-400 ml-1 font-bold">/ Month</span></p>
-                </div>
-                {sponsors.map(s => (
-                  <div key={s.id} className="bg-white p-6 rounded-3xl border border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 group hover:border-orange-300 transition-all shadow-sm">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <Building className="text-orange-500" size={16} />
-                        <h4 className="font-black text-lg text-slate-800">{s.name}</h4>
-                      </div>
-                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs font-bold text-slate-500">
-                        <span className="flex items-center gap-1"><UserPlus size={12} /> {s.repName || '担当者未登録'}</span>
-                        <span className="flex items-center gap-1"><Mail size={12} /> {s.email || 'Mail未登録'}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end">
-                      <p className="text-xl font-black text-orange-600">¥{parseInt(s.amount).toLocaleString()}</p>
-                      <div className="flex gap-2">
-                        <button onClick={() => { setEditingSponsor(s); setSponsorForm(s); window.scrollTo(0, 0); }} className="p-2 bg-slate-50 text-slate-400 hover:text-orange-600 rounded-lg"><Edit2 size={16} /></button>
-                        <button onClick={() => deleteSponsor(s.id)} className="p-2 bg-slate-50 text-slate-400 hover:text-rose-500 rounded-lg"><Trash2 size={16} /></button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                {sponsors.length === 0 && <div className="py-20 bg-white rounded-3xl border border-dashed border-slate-200 text-center"><p className="text-slate-400 font-bold">協賛企業が登録されていません</p></div>}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* 3. 管理者: 教材管理 */}
+        {/* お知らせ/教材等も管理者タブとして個別に存在 */}
         {currentUser.role === 'admin' && activeTab === 'materials' && (
-          <div className="space-y-8 animate-in fade-in duration-500">
-            <header className="text-left"><h2 className="text-2xl font-black text-slate-800 tracking-tight">教材管理</h2></header>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
-              <div className="md:col-span-1 bg-white rounded-3xl border border-slate-200 p-6 space-y-6 h-fit sticky top-24">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">{editingMaterial ? '教材を編集' : '新しい教材を追加'}</h3>
-                <form onSubmit={saveMaterial} className="space-y-4">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">タイトル</label>
-                    <input type="text" required value={materialForm.title} onChange={e => setMaterialForm({ ...materialForm, title: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold" placeholder="教材のタイトル" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">URL</label>
-                    <input type="url" required value={materialForm.url} onChange={e => setMaterialForm({ ...materialForm, url: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold" placeholder="教材のURL" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">タグ (カンマ区切り)</label>
-                    <input type="text" value={materialForm.tags} onChange={e => setMaterialForm({ ...materialForm, tags: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold" placeholder="例: プログラミング,デザイン" />
-                  </div>
-                  <button type="submit" className="w-full bg-orange-600 text-white font-black py-4 rounded-xl shadow-lg hover:bg-orange-700 transition-all flex items-center justify-center gap-2 active:scale-95">
-                    {editingMaterial ? <Save size={18} /> : <Plus size={18} />}
-                    {editingMaterial ? '更新する' : '追加する'}
-                  </button>
-                  {editingMaterial && (
-                    <button type="button" onClick={() => { setEditingMaterial(null); setMaterialForm({ title: '', url: '', tags: '' }); }} className="w-full bg-slate-200 text-slate-700 font-bold py-3 rounded-xl hover:bg-slate-300 transition-all flex items-center justify-center gap-2 mt-2">
-                      <RotateCcw size={18} /> キャンセル
-                    </button>
-                  )}
-                </form>
-              </div>
-              <div className="md:col-span-2 space-y-4">
-                <div className="flex flex-wrap gap-2 mb-4">
-                  <button onClick={() => setSelectedTag('All')} className={`px-4 py-2 rounded-full text-sm font-bold ${selectedTag === 'All' ? 'bg-orange-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>
-                    全ての教材
-                  </button>
-                  {Array.from(new Set(materials.flatMap(m => m.tags))).map(tag => (
-                    <button key={tag} onClick={() => setSelectedTag(tag)} className={`px-4 py-2 rounded-full text-sm font-bold ${selectedTag === tag ? 'bg-orange-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>
-                      {tag}
-                    </button>
+          <div className="space-y-8 animate-in fade-in duration-500 text-left">
+            <header className="text-left"><h2 className="text-2xl font-black tracking-tight text-slate-800">教材管理</h2></header>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start text-left text-slate-900">
+               <div className="md:col-span-1 bg-white rounded-3xl border border-slate-200 p-6 h-fit sticky top-24 shadow-sm text-left">
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">教材追加</h3>
+                  <form onSubmit={saveMaterial} className="space-y-4">
+                     <input type="text" placeholder="タイトル" value={materialForm.title} onChange={e=>setMaterialForm({...materialForm, title:e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold" />
+                     <input type="url" placeholder="URL" value={materialForm.url} onChange={e=>setMaterialForm({...materialForm, url:e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold" />
+                     <input type="text" placeholder="タグ (コンマ区切り)" value={materialForm.tags} onChange={e=>setMaterialForm({...materialForm, tags:e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold" />
+                     <button type="submit" className="w-full bg-slate-900 text-white font-black py-4 rounded-xl shadow-lg hover:bg-orange-600 transition-all uppercase tracking-widest text-sm">SAVE</button>
+                  </form>
+               </div>
+               <div className="md:col-span-2 space-y-4">
+                  {materials.map(m => (
+                    <div key={m.id} className="bg-white p-6 rounded-[2rem] border border-slate-200 flex justify-between items-start group shadow-sm text-left"><div className="text-left"><h4 className="font-black text-slate-800 text-lg">{m.title}</h4><div className="flex flex-wrap gap-2 mt-2">{m.tags.map(t=>(<span key={t} className="bg-slate-100 text-slate-500 text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">{t}</span>))}</div><a href={m.url} target="_blank" className="text-orange-600 text-xs font-black flex items-center gap-1 mt-4 hover:underline">OPEN <LinkIcon size={12}/></a></div><div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all"><button onClick={()=>{setEditingMaterial(m); setMaterialForm({...m, tags:m.tags.join(',')});}} className="p-2 text-slate-400 hover:text-orange-600"><Edit2 size={14}/></button><button onClick={()=>deleteMaterial(m.id)} className="p-2 text-slate-400 hover:text-rose-600"><Trash2 size={14}/></button></div></div>
                   ))}
-                </div>
-                {materials.filter(m => selectedTag === 'All' || m.tags.includes(selectedTag)).map(material => (
-                  <div key={material.id} className="bg-white p-6 rounded-[2rem] border border-slate-200 flex justify-between items-start group shadow-sm text-left">
-                    <div className="min-w-0 flex-1">
-                      <h4 className="font-black text-slate-800 text-lg truncate">{material.title}</h4>
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {material.tags.map(tag => (
-                          <span key={tag} className="bg-slate-100 text-slate-600 text-[10px] font-bold px-2 py-0.5 rounded-full">{tag}</span>
-                        ))}
-                      </div>
-                      <a href={material.url} target="_blank" rel="noopener noreferrer" className="text-orange-600 text-sm font-bold flex items-center gap-1 mt-3 hover:underline">
-                        教材を開く <LinkIcon size={14} />
-                      </a>
-                    </div>
-                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all shrink-0 ml-4">
-                      <button onClick={() => { setEditingMaterial(material); setMaterialForm({ ...material, tags: material.tags.join(',') }); window.scrollTo(0, 0); }} className="p-2 bg-slate-50 text-slate-400 hover:text-orange-600 rounded-lg"><Edit2 size={14} /></button>
-                      <button onClick={() => { if (window.confirm('この教材を削除しますか？')) deleteMaterial(material.id); }} className="p-2 bg-slate-50 text-slate-400 hover:text-rose-500 rounded-lg"><Trash2 size={14} /></button>
-                    </div>
-                  </div>
-                ))}
-                {materials.length === 0 && <div className="py-20 bg-white rounded-3xl border border-dashed border-slate-200 text-center"><p className="text-slate-400 font-bold">教材が登録されていません</p></div>}
-              </div>
+               </div>
             </div>
           </div>
         )}
 
-        {/* 4. 管理者: お知らせ管理 */}
         {currentUser.role === 'admin' && activeTab === 'notices' && (
-          <div className="space-y-8 animate-in fade-in duration-500">
-            <header className="text-left"><h2 className="text-2xl font-black text-slate-800 tracking-tight">お知らせ・緊急連絡</h2></header>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
-              <div className="md:col-span-1 bg-white rounded-3xl border border-slate-200 p-6 space-y-6">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">新規投稿</h3>
-                <form onSubmit={postAnnouncement} className="space-y-4">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">タイトル</label>
-                    <input type="text" required value={announcementForm.title} onChange={e => setAnnouncementForm({ ...announcementForm, title: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold" placeholder="タイトル" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">本文</label>
-                    <textarea required value={announcementForm.content} onChange={e => setAnnouncementForm({ ...announcementForm, content: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm h-32 resize-none" placeholder="本文を入力してください..." />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">タイプ</label>
-                    <select value={announcementForm.type} onChange={e => setAnnouncementForm({ ...announcementForm, type: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold outline-none">
-                      <option value="info">通常のお知らせ</option>
-                      <option value="emergency">緊急・重要連絡</option>
-                    </select>
-                  </div>
-                  <button type="submit" className="w-full bg-slate-900 text-white font-black py-3.5 rounded-xl shadow-lg hover:bg-orange-600 flex items-center justify-center gap-2 transition-all"><Plus size={18} /> 公開する</button>
-                </form>
-              </div>
-              <div className="md:col-span-2 space-y-4">
-                {announcements.map(notice => (
-                  <div key={notice.id} className="bg-white p-6 rounded-[2rem] border border-slate-200 flex justify-between items-start group shadow-sm text-left">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-3 mb-2">
-                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest ${notice.type === 'emergency' ? 'bg-rose-100 text-rose-600' : 'bg-orange-100 text-orange-600'}`}>{notice.type}</span>
-                        <span className="text-[10px] font-bold text-slate-400">{notice.createdAt?.toDate().toLocaleDateString()}</span>
-                      </div>
-                      <h4 className="font-black text-slate-800 text-lg truncate">{notice.title}</h4>
-                      <p className="text-sm text-slate-500 mt-2 leading-relaxed">{notice.content}</p>
-                    </div>
-                    <button onClick={async () => { if (window.confirm('削除しますか？')) { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'announcements', notice.id)); } }} className="text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all shrink-0 ml-4"><Trash2 size={18} /></button>
-                  </div>
-                ))}
-              </div>
+          <div className="space-y-8 animate-in fade-in duration-500 text-left">
+            <header className="text-left font-black text-2xl">全体お知らせ</header>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+               <div className="md:col-span-1 bg-white p-6 rounded-3xl border border-slate-200 h-fit shadow-sm"><h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6 text-left">新規投稿</h3><form onSubmit={postAnnouncement} className="space-y-4"><input type="text" required placeholder="タイトル" value={announcementForm.title} onChange={e=>setAnnouncementForm({...announcementForm, title:e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold" /><textarea required placeholder="本文" value={announcementForm.content} onChange={e=>setAnnouncementForm({...announcementForm, content:e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm h-32 resize-none" /><select value={announcementForm.type} onChange={e=>setAnnouncementForm({...announcementForm, type:e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold outline-none"><option value="info">通常</option><option value="emergency">緊急</option></select><button type="submit" className="w-full bg-slate-900 text-white font-black py-4 rounded-xl shadow-lg hover:bg-orange-600 transition-all uppercase tracking-[0.2em] text-sm">POST</button></form></div>
+               <div className="md:col-span-2 space-y-4 text-slate-800">{announcements.map(notice=>(<div key={notice.id} className="bg-white p-6 rounded-[2rem] border border-slate-200 flex justify-between items-start group shadow-sm text-left"><div><div className="flex items-center gap-3 mb-2"><span className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest ${notice.type==='emergency'?'bg-rose-100 text-rose-600':'bg-orange-100 text-orange-600'}`}>{notice.type}</span><span className="text-[10px] font-bold text-slate-400">{notice.createdAt?.toDate().toLocaleDateString()}</span></div><h4 className="font-black text-lg">{notice.title}</h4><p className="text-sm text-slate-500 mt-2 leading-relaxed">{notice.content}</p></div><button onClick={async()=>await deleteDoc(doc(db,'artifacts',appId,'public','data','announcements',notice.id))} className="text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all shrink-0"><Trash2 size={18}/></button></div>))}</div>
             </div>
           </div>
         )}
 
-        {/* 5. 受講生・保護者: 教材一覧 */}
-        {(currentUser.role === 'student' || currentUser.role === 'parent') && activeTab === 'materials' && (
-          <div className="space-y-8 animate-in fade-in duration-500">
-            <header className="text-left"><h2 className="text-2xl font-black text-slate-800 tracking-tight">教材一覧</h2></header>
-            <div className="space-y-4">
-              <div className="flex flex-wrap gap-2 mb-4">
-                <button onClick={() => setSelectedTag('All')} className={`px-4 py-2 rounded-full text-sm font-bold ${selectedTag === 'All' ? 'bg-orange-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>
-                  全ての教材
-                </button>
-                {Array.from(new Set(materials.flatMap(m => m.tags))).map(tag => (
-                  <button key={tag} onClick={() => setSelectedTag(tag)} className={`px-4 py-2 rounded-full text-sm font-bold ${selectedTag === tag ? 'bg-orange-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>
-                    {tag}
-                  </button>
-                ))}
-              </div>
-              {materials.filter(m => selectedTag === 'All' || m.tags.includes(selectedTag)).map(material => (
-                <div key={material.id} className="bg-white p-6 rounded-[2rem] border border-slate-200 flex items-center group shadow-sm hover:shadow-md transition-all text-left">
-                  <div className="min-w-0 flex-1">
-                    <h4 className="font-black text-slate-800 text-lg truncate">{material.title}</h4>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {material.tags.map(tag => (
-                        <span key={tag} className="bg-slate-100 text-slate-600 text-[10px] font-bold px-2 py-0.5 rounded-full">{tag}</span>
-                      ))}
-                    </div>
-                    <a href={material.url} target="_blank" rel="noopener noreferrer" className="text-orange-600 text-sm font-bold flex items-center gap-1 mt-3 hover:underline">
-                      教材を開く <LinkIcon size={14} />
-                    </a>
-                  </div>
-                </div>
-              ))}
-              {materials.length === 0 && <div className="py-20 bg-white rounded-3xl border border-dashed border-slate-200 text-center"><p className="text-slate-400 font-bold">教材が登録されていません</p></div>}
-            </div>
-          </div>
-        )}
-
-        {/* 6. 受講生・保護者: マイページ */}
+        {/* --- 受講生・保護者向け --- */}
         {(currentUser.role === 'student' || currentUser.role === 'parent') && activeTab === 'mypage' && (
-          <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
-            <header className="flex flex-col md:flex-row justify-between items-start gap-6">
-              <div className="text-left">
-                <h2 className="text-3xl font-black text-slate-800 tracking-tight">{currentUser.name}様 <span className="text-orange-600 font-light ml-2">マイページ</span></h2>
-                <p className="text-slate-400 text-sm font-medium mt-1">{currentUser.role === 'student' ? '今日学んだことを記録して成長を残しましょう。' : `${currentUser.childName}さんの学習と作品の歩みです。`}</p>
-              </div>
-              <div className="w-full md:w-auto">
-                <div className="bg-white p-5 rounded-[1.5rem] border border-slate-200 shadow-xl flex flex-col justify-center">
-                  <p className="text-[10px] font-black text-slate-400 uppercase mb-1 flex items-center gap-1.5"><Clock size={12} className="text-orange-500" /> 次回の授業日</p>
-                  <p className="text-xl font-black text-slate-800">{currentUser.nextClassDate || '未設定'}</p>
-                </div>
+          <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500 text-left text-slate-900">
+            <header className="flex flex-col md:flex-row justify-between items-start gap-6 text-left">
+              <div className="text-left"><h2 className="text-3xl font-black tracking-tight text-left">{currentUser.name}様 <span className="text-orange-600 font-light ml-2">MY PAGE</span></h2><p className="text-slate-400 text-sm font-medium mt-1 text-left">今日学んだことを記録して成長をポートフォリオに残しましょう。</p></div>
+              <div className="w-full md:w-auto grid grid-cols-2 gap-4 shrink-0 text-left">
+                 <div className="bg-white p-5 rounded-[1.5rem] border border-slate-200 shadow-xl flex flex-col justify-center text-left"><p className="text-[10px] font-black text-slate-400 uppercase mb-1 flex items-center gap-1.5"><Clock size={12} className="text-orange-500" /> NEXT CLASS</p><p className="text-xl font-black text-slate-800 whitespace-nowrap">{currentUser.nextClassDate || '未設定'}</p></div>
+                 <div className="bg-orange-600 p-5 rounded-[1.5rem] text-white shadow-xl flex flex-col justify-center text-left"><p className="text-[10px] font-black uppercase mb-1 opacity-60 tracking-widest text-left">Reduction</p><p className="text-xl font-black tracking-tighter text-left">¥{reductionPerStudent.toLocaleString()}</p></div>
               </div>
             </header>
-
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
-              {/* 生徒のみ: 投稿フォーム */}
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start text-left">
               {currentUser.role === 'student' && (
                 <div className="lg:col-span-1 bg-white rounded-3xl border border-slate-200 p-6 space-y-6 h-fit sticky top-24 shadow-sm text-left">
-                  <div className="flex items-center gap-2 font-bold text-slate-700 text-xs uppercase tracking-widest"><BookOpen size={16} className="text-orange-500" /> 学習・制作を記録</div>
-                  <form onSubmit={submitLearningRecord} className="space-y-4 text-left">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-400 ml-1 uppercase">Title</label>
-                      <input type="text" value={newLearningRecord.title} onChange={e => setNewLearningRecord({ ...newLearningRecord, title: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold focus:ring-2 focus:ring-orange-500 outline-none" placeholder="今日の課題など" required />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-400 ml-1 uppercase">Message</label>
-                      <textarea value={newLearningRecord.content} onChange={e => setNewLearningRecord({ ...newLearningRecord, content: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm h-32 resize-none focus:ring-2 focus:ring-orange-500 outline-none" placeholder="学んだことや感想..." required />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-400 ml-1 uppercase text-left">Portfolio URL (Option)</label>
-                      <input type="text" value={newLearningRecord.imageUrl} onChange={e => setNewLearningRecord({ ...newLearningRecord, imageUrl: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs" placeholder="画像や作品のURL" />
-                    </div>
-                    <button type="submit" className="w-full bg-orange-600 text-white font-black py-4 rounded-2xl shadow-lg hover:bg-orange-700 transition-all flex items-center justify-center gap-2 active:scale-95"><Plus size={20} /> 記録を保存</button>
-                  </form>
+                  <div className="flex items-center gap-2 font-bold text-slate-700 text-xs uppercase tracking-widest text-left"><BookOpen size={16} className="text-orange-500" /> 今日の学習を記録</div>
+                  <form onSubmit={submitLearningRecord} className="space-y-4 text-left"><input type="text" value={newLearningRecord.title} onChange={e => setNewLearningRecord({ ...newLearningRecord, title: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-left" placeholder="タイトル" required /><textarea value={newLearningRecord.content} onChange={e => setNewLearningRecord({ ...newLearningRecord, content: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm h-32 resize-none text-left" placeholder="内容" required /><input type="text" placeholder="画像URL" value={newLearningRecord.imageUrl} onChange={e=>setNewLearningRecord({...newLearningRecord, imageUrl:e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs" /><button type="submit" className="w-full bg-orange-600 text-white font-black py-4 rounded-2xl shadow-lg hover:bg-orange-700 transition-all flex items-center justify-center gap-2 active:scale-95 text-sm">SAVE RECORD</button></form>
                 </div>
               )}
-
-              {/* タイムライン */}
               <div className={`${currentUser.role === 'student' ? 'lg:col-span-3' : 'lg:col-span-4'} space-y-6 text-left`}>
-                <h3 className="text-xl font-black text-slate-800 flex items-center gap-3">
-                  <ImageIcon size={22} className="text-orange-500" /> 学習・制作のポートフォリオ
-                </h3>
-                {learningRecords.length === 0 ? (
-                  <div className="bg-white rounded-3xl border border-dashed border-slate-200 p-20 text-center text-slate-400 font-bold uppercase tracking-widest text-xs">No records recorded yet</div>
-                ) : (
-                  <div className="grid grid-cols-1 gap-6">
-                    {learningRecords.sort((a, b) => b.date.localeCompare(a.date)).map(record => (
+                <h3 className="text-xl font-black text-slate-800 flex items-center gap-3 text-left"><ImageIcon size={22} className="text-orange-500" /> 学習・制作のポートフォリオ</h3>
+                <div className="grid grid-cols-1 gap-6 text-left">
+                  {learningRecords.length === 0 ? <div className="bg-white rounded-3xl border border-dashed border-slate-200 p-20 text-center text-slate-400 font-bold text-xs uppercase tracking-widest">No records found</div> : 
+                    learningRecords.sort((a,b)=>b.date.localeCompare(a.date)).map(record => (
                       <div key={record.id} className="bg-white rounded-[2rem] border border-slate-200 overflow-hidden flex flex-col md:flex-row shadow-sm hover:shadow-md transition-all text-left group">
                         {record.imageUrl && (
-                          <div className="md:w-72 h-56 md:h-auto bg-slate-100 flex-shrink-0 relative overflow-hidden">
-                            <img src={record.imageUrl} alt="成果物" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1488190211105-8b0e65b80b4e?auto=format&fit=crop&q=80&w=400'; }} />
-                          </div>
+                          <div className="md:w-72 h-56 md:h-auto bg-slate-100 flex-shrink-0 relative overflow-hidden"><img src={record.imageUrl} alt="成果物" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" onError={(e)=>{e.target.src='https://images.unsplash.com/photo-1488190211105-8b0e65b80b4e?auto=format&fit=crop&q=80&w=400';}} /></div>
                         )}
-                        <div className="p-8 flex-1 space-y-5 flex flex-col">
-                          <div className="flex justify-between items-start gap-4 min-w-0">
-                            <div className="min-w-0 flex-1">
-                              <p className="text-[10px] font-black text-orange-600 uppercase tracking-[0.2em] mb-1">{new Date(record.date).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                              <h4 className="text-2xl font-black text-slate-800 truncate leading-tight">{record.title}</h4>
-                            </div>
-                            {currentUser.role === 'student' && (
-                              <button onClick={async () => { if (window.confirm('削除しますか？')) { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'learning_records', record.id)); } }} className="p-2 text-slate-300 hover:text-rose-500 transition-colors shrink-0"><Trash2 size={16} /></button>
-                            )}
-                          </div>
-                          <p className="text-sm text-slate-500 leading-relaxed font-medium whitespace-pre-wrap flex-grow">{record.content}</p>
-
-                          {/* 管理者コメント */}
-                          {record.comment && (
-                            <div className="mt-4 bg-orange-50/70 border border-orange-100 p-5 rounded-2xl relative">
-                              <div className="absolute top-0 left-8 -translate-y-1/2 w-4 h-4 bg-orange-50/70 border-t border-l border-orange-100 rotate-45"></div>
-                              <div className="flex items-center gap-2 text-orange-600 font-black text-[10px] uppercase tracking-widest mb-2"><MessageSquare size={12} /> Administrator Feedback</div>
-                              <p className="text-sm text-slate-700 font-bold italic leading-relaxed">"{record.comment}"</p>
-                            </div>
-                          )}
+                        <div className="p-8 flex-1 space-y-5 text-left">
+                          <div className="text-left"><p className="text-[10px] font-black text-orange-600 uppercase tracking-[0.2em] mb-1 text-left">{new Date(record.date).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })}</p><h4 className="text-2xl font-black text-slate-800 text-left">{record.title}</h4></div>
+                          <p className="text-sm text-slate-500 leading-relaxed font-medium whitespace-pre-wrap text-left">{record.content}</p>
+                          {record.comment && <div className="mt-4 bg-orange-50/70 border border-orange-100 p-5 rounded-2xl relative text-left"><div className="flex items-center gap-2 text-orange-600 font-black text-[10px] uppercase tracking-widest mb-2 text-left font-sans"><MessageSquare size={12} /> Feedback</div><p className="text-sm text-slate-700 font-bold italic text-left">"{record.comment}"</p></div>}
                         </div>
                       </div>
                     ))}
-                  </div>
-                )}
+                </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* 教材一覧 */}
+        {(currentUser.role === 'student' || currentUser.role === 'parent') && activeTab === 'materials' && (
+          <div className="space-y-8 text-left animate-in fade-in duration-500">
+            <header className="text-left"><h2 className="text-2xl font-black text-slate-800 tracking-tight text-left">教材・リソース一覧</h2></header>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
+              {materials.map(m => (
+                <div key={m.id} className="bg-white p-6 rounded-[2rem] border border-slate-200 flex items-center group shadow-sm hover:shadow-md transition-all text-left"><div className="text-left"><h4 className="font-black text-slate-800 text-lg text-left">{m.title}</h4><div className="flex flex-wrap gap-2 mt-2 text-left">{m.tags.map(t=>(<span key={t} className="bg-slate-100 text-slate-500 text-[9px] font-black px-2 py-0.5 rounded-full uppercase text-left">{t}</span>))}</div><a href={m.url} target="_blank" className="text-orange-600 text-xs font-black flex items-center gap-1 mt-4 text-left hover:underline">OPEN MATERIAL <LinkIcon size={12}/></a></div></div>
+              ))}
+              {materials.length === 0 && <div className="md:col-span-2 py-20 bg-white rounded-3xl border border-dashed border-slate-200 text-center text-slate-400 font-bold uppercase tracking-widest text-xs">No materials uploaded</div>}
             </div>
           </div>
         )}
       </main>
-
-      <footer className="shrink-0 mt-auto py-10 border-t border-slate-200 text-center text-slate-300 text-[10px] font-black tracking-[0.5em] uppercase">
-        Clayette Educational Management Platform
-      </footer>
-
+      <footer className="shrink-0 mt-auto py-10 border-t border-slate-200 text-center text-slate-300 text-[10px] font-black tracking-[0.5em] uppercase text-center">Clayette Educational Management Platform</footer>
       {showReport && <ReportModal />}
-
       <style>{`
         @media print { .print\\:hidden { display: none !important; } .print\\:bg-white { background: white !important; } .print\\:p-10 { padding: 2.5rem !important; } body { overflow: visible !important; } .rounded-[2rem], .rounded-[2.5rem] { border-radius: 1rem !important; } }
         input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 22px; height: 22px; background: white; cursor: pointer; border-radius: 50%; border: 4px solid #ea580c; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
         .animate-bounce-slow { animation: bounce 3s infinite ease-in-out; }
-        .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-        .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-
       `}</style>
     </div>
   );
