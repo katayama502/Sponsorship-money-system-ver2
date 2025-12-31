@@ -104,7 +104,10 @@ const App = () => {
 
   // --- 生徒フォーム状態 ---
   const [editingStudent, setEditingStudent] = useState(null);
-  const [studentForm, setStudentForm] = useState({ name: '', school: '', age: '', courseId: 'premium', remarks: '', nextClassDate: '' });
+  const [studentForm, setStudentForm] = useState({
+    name: '', school: '', age: '', courseId: 'premium', remarks: '', nextClassDate: '',
+    studentLoginId: '', studentPassword: '', parentLoginId: '', parentPassword: ''
+  });
   const [generatedCreds, setGeneratedCreds] = useState(null);
 
   // --- 学習記録 & お知らせフォーム ---
@@ -246,6 +249,16 @@ const App = () => {
     finally { setIsRecording(false); setTimeout(() => setSaveMessage(''), 3000); }
   };
 
+  const fillCredentials = () => {
+    const s = generateCredentials();
+    const p = generateCredentials();
+    setStudentForm(prev => ({
+      ...prev,
+      studentLoginId: s.id, studentPassword: s.pw,
+      parentLoginId: p.id, parentPassword: p.pw
+    }));
+  };
+
   const saveStudent = async (e) => {
     e.preventDefault();
     try {
@@ -255,19 +268,30 @@ const App = () => {
         });
         setSaveMessage('更新しました');
       } else {
-        const studentCreds = generateCredentials();
-        const parentCreds = generateCredentials();
+        // Use manually entered credentials or generate if empty
+        const sId = studentForm.studentLoginId || generateCredentials().id;
+        const sPw = studentForm.studentPassword || generateCredentials().pw;
+        const pId = studentForm.parentLoginId || generateCredentials().id;
+        const pPw = studentForm.parentPassword || generateCredentials().pw;
+
         const data = {
           ...studentForm,
-          studentLoginId: studentCreds.id, studentPassword: studentCreds.pw,
-          parentLoginId: parentCreds.id, parentPassword: parentCreds.pw,
+          studentLoginId: sId, studentPassword: sPw,
+          parentLoginId: pId, parentPassword: pPw,
           createdAt: serverTimestamp()
         };
         await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'students'), data);
-        setGeneratedCreds({ student: studentCreds, parent: parentCreds, name: studentForm.name });
+        setGeneratedCreds({
+          student: { id: sId, pw: sPw },
+          parent: { id: pId, pw: pPw },
+          name: studentForm.name
+        });
         setSaveMessage('登録・ID発行完了');
       }
-      setStudentForm({ name: '', school: '', age: '', courseId: 'premium', remarks: '', nextClassDate: '' });
+      setStudentForm({
+        name: '', school: '', age: '', courseId: 'premium', remarks: '', nextClassDate: '',
+        studentLoginId: '', studentPassword: '', parentLoginId: '', parentPassword: ''
+      });
       setEditingStudent(null);
     } catch (e) { setSaveMessage('エラーが発生しました'); }
     setTimeout(() => setSaveMessage(''), 4000);
@@ -707,6 +731,32 @@ const App = () => {
                     <select value={studentForm.courseId} onChange={e => setStudentForm({ ...studentForm, courseId: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold outline-none appearance-none">
                       {COURSE_BASES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
                     </select>
+                  </div>
+
+                  {/* ID/PW Manual Entry Section */}
+                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">ログイン情報設定 (任意)</span>
+                      <button type="button" onClick={fillCredentials} className="text-[10px] bg-slate-200 px-2 py-1 rounded text-slate-600 hover:bg-slate-300 font-bold">自動生成</button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[9px] font-bold text-slate-400 block mb-1">生徒ID</label>
+                        <input type="text" value={studentForm.studentLoginId} onChange={e => setStudentForm({ ...studentForm, studentLoginId: e.target.value })} className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs font-bold" />
+                      </div>
+                      <div>
+                        <label className="text-[9px] font-bold text-slate-400 block mb-1">生徒PW</label>
+                        <input type="text" value={studentForm.studentPassword} onChange={e => setStudentForm({ ...studentForm, studentPassword: e.target.value })} className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs font-bold" />
+                      </div>
+                      <div>
+                        <label className="text-[9px] font-bold text-slate-400 block mb-1">保護者ID</label>
+                        <input type="text" value={studentForm.parentLoginId} onChange={e => setStudentForm({ ...studentForm, parentLoginId: e.target.value })} className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs font-bold" />
+                      </div>
+                      <div>
+                        <label className="text-[9px] font-bold text-slate-400 block mb-1">保護者PW</label>
+                        <input type="text" value={studentForm.parentPassword} onChange={e => setStudentForm({ ...studentForm, parentPassword: e.target.value })} className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs font-bold" />
+                      </div>
+                    </div>
                   </div>
                   <button type="submit" className="w-full bg-orange-600 text-white font-black py-4 rounded-xl shadow-lg hover:bg-orange-700 transition-all flex items-center justify-center gap-2 active:scale-95">
                     {editingStudent ? <Edit2 size={18} /> : <UserPlus size={18} />}
