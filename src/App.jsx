@@ -406,7 +406,7 @@ const App = () => {
               </div>
               {/* 右側: Scratchエディタ */}
               <div className="flex-1 bg-white relative text-left">
-                <iframe src="https://turbowarp.org/editor?embed" className="w-full h-full border-none text-left" title="Scratch Editor" allowTransparency="true" allowFullScreen="true" sandbox="allow-scripts allow-same-origin allow-popups allow-forms" />
+                <iframe src="https://turbowarp.org/editor" className="w-full h-full border-none text-left" title="Scratch Editor" allowTransparency="true" allowFullScreen="true" sandbox="allow-scripts allow-same-origin allow-popups allow-forms" />
               </div>
             </>
           ) : (
