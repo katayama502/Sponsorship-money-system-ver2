@@ -1,10 +1,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { 
-  Users, 
-  Building2, 
-  Coins, 
-  TrendingDown, 
-  Settings2, 
+import {
+  Users,
+  Building2,
+  Coins,
+  TrendingDown,
+  Settings2,
   Calculator,
   Info,
   ChevronRight,
@@ -50,13 +50,13 @@ import { getFirestore, doc, setDoc, deleteDoc, collection, onSnapshot, query, se
 
 // --- Firebase Configuration ---
 const firebaseConfig = {
-    apiKey: "AIzaSyArYfL-wE_F0OF3QNl5_jh_B7ZXr7Ev5fg",
-    authDomain: "creatte-sponser-app.firebaseapp.com",
-    projectId: "creatte-sponser-app",
-    storageBucket: "creatte-sponser-app.firebasestorage.app",
-    messagingSenderId: "753873131194",
-    appId: "1:753873131194:web:496a6913a523139c7e1483",
-    measurementId: "G-LVQ6WXT9L3"
+  apiKey: "AIzaSyArYfL-wE_F0OF3QNl5_jh_B7ZXr7Ev5fg",
+  authDomain: "creatte-sponser-app.firebaseapp.com",
+  projectId: "creatte-sponser-app",
+  storageBucket: "creatte-sponser-app.firebasestorage.app",
+  messagingSenderId: "753873131194",
+  appId: "1:753873131194:web:496a6913a523139c7e1483",
+  measurementId: "G-LVQ6WXT9L3"
 };
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -73,7 +73,7 @@ const COURSE_BASES = [
 // --- ユーティリティ: ID・パスワード生成 ---
 const generateCredentials = () => {
   const chars = "abcdefghjkmnpqrstuvwxyz23456789";
-  const gen = (len) => Array.from({length: len}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+  const gen = (len) => Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
   return { id: gen(6), pw: gen(8) };
 };
 
@@ -88,11 +88,11 @@ const App = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showReport, setShowReport] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
-  
+
   // --- データ状態 ---
   const [costs, setCosts] = useState({ '家賃': 150000, '水道光熱費': 30000, '講師費用': 200000, '教材費': 50000, '備品費': 20000 });
   const [sponsorship, setSponsorship] = useState(300000);
-  const [bufferStudentTarget, setBufferStudentTarget] = useState(5); 
+  const [bufferStudentTarget, setBufferStudentTarget] = useState(5);
   const [historyRecords, setHistoryRecords] = useState([]);
   const [students, setStudents] = useState([]);
   const [learningRecords, setLearningRecords] = useState([]);
@@ -124,16 +124,16 @@ const App = () => {
 
   useEffect(() => {
     if (!currentUser) return;
-    
+
     // データ購読（ロールに関わらず基本データは購読）
     const unsubRecords = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'monthly_records'), (snap) => {
-      setHistoryRecords(snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => a.month.localeCompare(b.month)));
+      setHistoryRecords(snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => a.month.localeCompare(b.month)));
     });
     const unsubStudents = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'students'), (snap) => {
       setStudents(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
     const unsubAnnounce = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'announcements'), (snap) => {
-      setAnnouncements(snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => b.createdAt?.toMillis() - a.createdAt?.toMillis()));
+      setAnnouncements(snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => b.createdAt?.toMillis() - a.createdAt?.toMillis()));
     });
     const unsubLearning = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'learning_records'), (snap) => {
       const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -153,7 +153,7 @@ const App = () => {
   const handleLogin = async (e) => {
     e.preventDefault();
     setAuthError('');
-    
+
     // 管理者ログイン (admin / admin123)
     if (loginId === 'admin' && password === 'admin123') {
       setCurrentUser({ role: 'admin', name: 'システム管理者' });
@@ -165,7 +165,7 @@ const App = () => {
     const studentsCol = collection(db, 'artifacts', appId, 'public', 'data', 'students');
     const q = query(studentsCol);
     const querySnapshot = await getDocs(q);
-    
+
     let found = null;
     querySnapshot.forEach((docSnap) => {
       const data = docSnap.data();
@@ -204,7 +204,7 @@ const App = () => {
   const availableSurplus = (totalBaseRevenue + sponsorship) - (totalOperatingCost + bufferAmount);
   const reductionPerStudent = totalStudents === 0 ? 0 : Math.max(0, Math.floor(availableSurplus / totalStudents / 1000) * 1000);
   const coverageRate = Math.min(100, totalOperatingCost > 0 ? Math.round((sponsorship / totalOperatingCost) * 100) : 0);
-  
+
   const finalNetSurplus = availableSurplus - (reductionPerStudent * totalStudents);
   const capacityPerCourse = useMemo(() => {
     const pool = finalNetSurplus + bufferAmount;
@@ -216,7 +216,7 @@ const App = () => {
 
   // --- ハンドラー ---
   const handleCostChange = (key, value) => setCosts(prev => ({ ...prev, [key]: parseInt(value) || 0 }));
-  
+
   const recordMonthlyStatus = async () => {
     if (!user) return;
     setIsRecording(true);
@@ -303,17 +303,17 @@ const App = () => {
   const TrendChart = () => {
     if (historyRecords.length < 2) return <div className="h-32 flex items-center justify-center bg-slate-50 rounded-2xl border border-dashed text-xs text-slate-400">履歴データ不足</div>;
     const maxVal = Math.max(...historyRecords.map(r => Math.max(r.totalCost || 0, r.sponsorship || 0))) * 1.2;
-    const points = (valKey) => historyRecords.map((r, i) => `${(i/(historyRecords.length-1))*100},${100 - ((r[valKey]||0)/maxVal)*100}`).join(' ');
+    const points = (valKey) => historyRecords.map((r, i) => `${(i / (historyRecords.length - 1)) * 100},${100 - ((r[valKey] || 0) / maxVal) * 100}`).join(' ');
     return (
       <div className="w-full bg-slate-900 rounded-3xl p-6 text-white shadow-xl relative mb-6">
         <div className="flex justify-between items-center mb-4 text-[10px] font-bold tracking-widest">
-           <div className="flex items-center gap-2 text-orange-400 uppercase"><TrendingUp size={14} /> 運営推移分析</div>
-           <div className="flex gap-4">
-             <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-orange-500"></div>協賛</span>
-             <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-slate-400"></div>運営</span>
-           </div>
+          <div className="flex items-center gap-2 text-orange-400 uppercase"><TrendingUp size={14} /> 運営推移分析</div>
+          <div className="flex gap-4">
+            <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-orange-500"></div>協賛</span>
+            <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-slate-400"></div>運営</span>
+          </div>
         </div>
-        <svg viewBox="0 0 100 100" className="w-full h-24 overflow-visible" preserveAspectRatio="none">
+        <svg viewBox="0 0 100 100" className="w-full h-32 md:h-24 overflow-visible" preserveAspectRatio="none">
           <polyline fill="none" stroke="#64748b" strokeWidth="1" points={points('totalCost')} />
           <polyline fill="none" stroke="#f97316" strokeWidth="2" points={points('sponsorship')} />
         </svg>
@@ -354,8 +354,8 @@ const App = () => {
 
           <section className="grid grid-cols-1 lg:grid-cols-4 gap-4">
             <div className="lg:col-span-1 flex flex-col items-center justify-center p-8 bg-orange-600 text-white rounded-[2rem] shadow-xl relative overflow-hidden text-center">
-               <p className="text-[10px] font-bold uppercase tracking-widest mb-4 opacity-80">運営費カバー率</p>
-               <div className="relative w-32 h-32 mx-auto">
+              <p className="text-[10px] font-bold uppercase tracking-widest mb-4 opacity-80">運営費カバー率</p>
+              <div className="relative w-32 h-32 mx-auto">
                 <svg viewBox="0 0 36 36" className="w-full h-full transform -rotate-90">
                   <circle cx="18" cy="18" r="16" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="3" />
                   <circle cx="18" cy="18" r="16" fill="none" stroke="white" strokeWidth="3" strokeDasharray={`${coverageRate} 100`} strokeLinecap="round" />
@@ -363,7 +363,7 @@ const App = () => {
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                   <span className="text-4xl font-black leading-none">{coverageRate}<span className="text-sm">%</span></span>
                 </div>
-               </div>
+              </div>
             </div>
             <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="bg-slate-50 p-8 rounded-[2rem] border border-slate-100 text-left">
@@ -385,22 +385,22 @@ const App = () => {
               資金使途の詳細
             </div>
             <div className="bg-slate-50 rounded-[2.5rem] p-8 md:p-12 border border-slate-100 space-y-8">
-                {Object.entries(costs).map(([key, value]) => {
-                  const categoryWeight = totalOperatingCost > 0 ? value / totalOperatingCost : 0;
-                  const coveredAmount = sponsorship * categoryWeight;
-                  const coverRatio = Math.min(100, value > 0 ? Math.round((coveredAmount / value) * 100) : 0);
-                  return (
-                    <div key={key}>
-                      <div className="flex justify-between text-xs mb-2 font-bold text-slate-600">
-                        <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-orange-500"></div> {key}</span>
-                        <span>支援寄与率: {coverRatio}%</span>
-                      </div>
-                      <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
-                        <div className="h-full bg-orange-500 transition-all duration-1000" style={{ width: `${coverRatio}%` }} />
-                      </div>
+              {Object.entries(costs).map(([key, value]) => {
+                const categoryWeight = totalOperatingCost > 0 ? value / totalOperatingCost : 0;
+                const coveredAmount = sponsorship * categoryWeight;
+                const coverRatio = Math.min(100, value > 0 ? Math.round((coveredAmount / value) * 100) : 0);
+                return (
+                  <div key={key}>
+                    <div className="flex justify-between text-xs mb-2 font-bold text-slate-600">
+                      <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-orange-500"></div> {key}</span>
+                      <span>支援寄与率: {coverRatio}%</span>
                     </div>
-                  );
-                })}
+                    <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
+                      <div className="h-full bg-orange-500 transition-all duration-1000" style={{ width: `${coverRatio}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </section>
         </div>
@@ -423,14 +423,14 @@ const App = () => {
               <div>
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Login ID</label>
                 <div className="relative">
-                  <input type="text" value={loginId} onChange={e=>setLoginId(e.target.value)} required className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-orange-500 outline-none" />
+                  <input type="text" value={loginId} onChange={e => setLoginId(e.target.value)} required className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-orange-500 outline-none" />
                   <Users className="absolute right-4 top-3.5 text-slate-300" size={16} />
                 </div>
               </div>
               <div>
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Password</label>
                 <div className="relative">
-                  <input type="password" value={password} onChange={e=>setPassword(e.target.value)} required className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-orange-500 outline-none" />
+                  <input type="password" value={password} onChange={e => setPassword(e.target.value)} required className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-orange-500 outline-none" />
                   <Key className="absolute right-4 top-3.5 text-slate-300" size={16} />
                 </div>
               </div>
@@ -457,12 +457,12 @@ const App = () => {
             <div className="flex gap-1 bg-slate-100 p-1 rounded-xl">
               {currentUser.role === 'admin' ? (
                 <>
-                  <button onClick={() => setActiveTab('dashboard')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'dashboard' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500'}`}>分析</button>
-                  <button onClick={() => setActiveTab('students')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'students' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500'}`}>生徒管理</button>
-                  <button onClick={() => setActiveTab('notices')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'notices' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500'}`}>お知らせ</button>
+                  <button onClick={() => setActiveTab('dashboard')} className={`px-2 md:px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'dashboard' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500'}`}>分析</button>
+                  <button onClick={() => setActiveTab('students')} className={`px-2 md:px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'students' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500'}`}>生徒管理</button>
+                  <button onClick={() => setActiveTab('notices')} className={`px-2 md:px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'notices' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500'}`}>お知らせ</button>
                 </>
               ) : (
-                <button onClick={() => setActiveTab('mypage')} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all bg-white text-orange-600 shadow-sm`}>マイページ</button>
+                <button onClick={() => setActiveTab('mypage')} className={`px-2 md:px-4 py-1.5 rounded-lg text-xs font-bold transition-all bg-white text-orange-600 shadow-sm`}>マイページ</button>
               )}
             </div>
             <button onClick={handleLogout} className="text-slate-400 hover:text-rose-600 transition-colors"><LogOut size={20} /></button>
@@ -472,7 +472,7 @@ const App = () => {
 
       {/* メインコンテンツエリア */}
       <main className="flex-grow max-w-6xl w-full mx-auto p-4 md:p-8 space-y-8">
-        
+
         {saveMessage && (
           <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-bounce">
             <CheckCircle2 size={18} className="text-emerald-400" />
@@ -483,13 +483,13 @@ const App = () => {
         {/* --- 共通: お知らせ通知 --- */}
         {currentUser.role !== 'admin' && announcements.length > 0 && (
           <div className="bg-orange-600 text-white p-4 rounded-[1.5rem] shadow-xl flex items-start gap-4 animate-in slide-in-from-top-4 duration-700">
-             <div className="bg-white/20 p-2 rounded-xl shrink-0"><Megaphone size={20} /></div>
-             <div className="flex-1 min-w-0">
-                <p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-0.5">Notification</p>
-                <h4 className="font-black text-sm truncate">{announcements[0].title}</h4>
-                <p className="text-xs mt-1 font-medium text-orange-50 line-clamp-2">{announcements[0].content}</p>
-             </div>
-             {announcements[0].type === 'emergency' && <div className="bg-rose-500 px-2 py-1 rounded-lg text-[10px] font-black animate-pulse">重要</div>}
+            <div className="bg-white/20 p-2 rounded-xl shrink-0"><Megaphone size={20} /></div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-0.5">Notification</p>
+              <h4 className="font-black text-sm truncate">{announcements[0].title}</h4>
+              <p className="text-xs mt-1 font-medium text-orange-50 line-clamp-2">{announcements[0].content}</p>
+            </div>
+            {announcements[0].type === 'emergency' && <div className="bg-rose-500 px-2 py-1 rounded-lg text-[10px] font-black animate-pulse">重要</div>}
           </div>
         )}
 
@@ -513,99 +513,99 @@ const App = () => {
             <TrendChart />
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-               <div className="space-y-6">
-                  {/* 運営コスト設定 */}
-                  <div className="bg-white rounded-3xl border border-slate-200 p-6 space-y-4">
-                     <div className="flex items-center gap-2 font-bold text-slate-700 text-xs uppercase tracking-widest"><Settings2 size={14} className="text-orange-500" /> 月間コスト設定</div>
-                     {Object.entries(costs).map(([key, value]) => (
-                        <div key={key}>
-                           <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">{key}</label>
-                           <input type="number" value={value} onChange={(e) => handleCostChange(key, e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold focus:ring-2 focus:ring-orange-500 outline-none" />
-                        </div>
-                     ))}
-                     <div className="pt-4 border-t border-dashed flex justify-between items-center"><span className="text-[10px] font-bold text-slate-400 uppercase">Total Cost</span><span className="text-lg font-black text-orange-600">¥{totalOperatingCost.toLocaleString()}</span></div>
-                  </div>
+              <div className="space-y-6">
+                {/* 運営コスト設定 */}
+                <div className="bg-white rounded-3xl border border-slate-200 p-6 space-y-4">
+                  <div className="flex items-center gap-2 font-bold text-slate-700 text-xs uppercase tracking-widest"><Settings2 size={14} className="text-orange-500" /> 月間コスト設定</div>
+                  {Object.entries(costs).map(([key, value]) => (
+                    <div key={key}>
+                      <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">{key}</label>
+                      <input type="number" value={value} onChange={(e) => handleCostChange(key, e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold focus:ring-2 focus:ring-orange-500 outline-none" />
+                    </div>
+                  ))}
+                  <div className="pt-4 border-t border-dashed flex justify-between items-center"><span className="text-[10px] font-bold text-slate-400 uppercase">Total Cost</span><span className="text-lg font-black text-orange-600">¥{totalOperatingCost.toLocaleString()}</span></div>
+                </div>
 
-                  {/* バッファ設定 */}
-                  <div className="bg-orange-600 text-white rounded-3xl p-6 space-y-4 shadow-xl">
-                     <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-widest opacity-80"><ShieldCheck size={14} /> 協賛金バッファ設定</div>
-                     <p className="text-[10px] text-orange-100 font-medium">コースA({COURSE_BASES[0].price.toLocaleString()}円)の生徒何人分の資金を予備費にしますか？</p>
-                     <input type="range" min="0" max="20" step="1" value={bufferStudentTarget} onChange={(e) => setBufferStudentTarget(parseInt(e.target.value))} className="w-full h-1.5 bg-orange-400 rounded-full appearance-none cursor-pointer accent-white" />
-                     <div className="flex justify-between items-center font-black">
-                        <span className="text-[10px]">現在: {bufferStudentTarget}名分</span>
-                        <span className="text-lg">¥{bufferAmount.toLocaleString()}</span>
-                     </div>
+                {/* バッファ設定 */}
+                <div className="bg-orange-600 text-white rounded-3xl p-6 space-y-4 shadow-xl">
+                  <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-widest opacity-80"><ShieldCheck size={14} /> 協賛金バッファ設定</div>
+                  <p className="text-[10px] text-orange-100 font-medium">コースA({COURSE_BASES[0].price.toLocaleString()}円)の生徒何人分の資金を予備費にしますか？</p>
+                  <input type="range" min="0" max="20" step="1" value={bufferStudentTarget} onChange={(e) => setBufferStudentTarget(parseInt(e.target.value))} className="w-full h-1.5 bg-orange-400 rounded-full appearance-none cursor-pointer accent-white" />
+                  <div className="flex justify-between items-center font-black">
+                    <span className="text-[10px]">現在: {bufferStudentTarget}名分</span>
+                    <span className="text-lg">¥{bufferAmount.toLocaleString()}</span>
                   </div>
-               </div>
+                </div>
+              </div>
 
-               <div className="lg:col-span-2 space-y-6">
-                  {/* 協賛金スライダー */}
-                  <div className="bg-white rounded-3xl border border-slate-200 p-8 relative overflow-hidden">
-                     <div className="absolute top-0 right-0 p-4 opacity-5"><Coins size={120} /></div>
-                     <p className="text-[10px] font-bold text-slate-400 uppercase mb-2">Current Total Sponsorship</p>
-                     <p className="text-5xl font-black text-orange-600 tracking-tighter mb-8">¥{sponsorship.toLocaleString()}</p>
-                     <input type="range" min="0" max="2000000" step="10000" value={sponsorship} onChange={(e) => setSponsorship(parseInt(e.target.value))} className="w-full h-3 bg-slate-100 rounded-full appearance-none cursor-pointer accent-orange-600 shadow-inner" />
+              <div className="lg:col-span-2 space-y-6">
+                {/* 協賛金スライダー */}
+                <div className="bg-white rounded-3xl border border-slate-200 p-8 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-4 opacity-5"><Coins size={120} /></div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase mb-2">Current Total Sponsorship</p>
+                  <p className="text-5xl font-black text-orange-600 tracking-tighter mb-8">¥{sponsorship.toLocaleString()}</p>
+                  <input type="range" min="0" max="2000000" step="10000" value={sponsorship} onChange={(e) => setSponsorship(parseInt(e.target.value))} className="w-full h-3 bg-slate-100 rounded-full appearance-none cursor-pointer accent-orange-600 shadow-inner" />
+                </div>
+
+                {/* 還元インパクト */}
+                <div className="bg-orange-600 rounded-[2.5rem] p-8 md:p-10 text-white flex flex-col sm:flex-row items-center justify-between gap-8 shadow-2xl shadow-orange-100">
+                  <div>
+                    <p className="text-orange-100 text-[10px] font-bold uppercase mb-4 tracking-widest">一律月額引き下げ額 (1,000円ステップ)</p>
+                    <div className="flex items-center gap-4">
+                      <ArrowDownCircle size={48} className="text-orange-200 animate-bounce-slow" />
+                      <span className="text-6xl md:text-7xl font-black tracking-tighter">¥{reductionPerStudent.toLocaleString()}</span>
+                    </div>
                   </div>
+                  <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-[2rem] p-6 text-center min-w-[140px]">
+                    <p className="text-[10px] font-bold mb-1 opacity-80 uppercase tracking-widest">Coverage</p>
+                    <p className="text-4xl font-black">{coverageRate}%</p>
+                  </div>
+                </div>
 
-                  {/* 還元インパクト */}
-                  <div className="bg-orange-600 rounded-[2.5rem] p-8 md:p-10 text-white flex flex-col sm:flex-row items-center justify-between gap-8 shadow-2xl shadow-orange-100">
-                    <div>
-                      <p className="text-orange-100 text-[10px] font-bold uppercase mb-4 tracking-widest">一律月額引き下げ額 (1,000円ステップ)</p>
-                      <div className="flex items-center gap-4">
-                        <ArrowDownCircle size={48} className="text-orange-200 animate-bounce-slow" />
-                        <span className="text-6xl md:text-7xl font-black tracking-tighter">¥{reductionPerStudent.toLocaleString()}</span>
+                {/* 追加受入枠 */}
+                <div className="bg-white rounded-3xl border border-slate-200 p-6">
+                  <div className="flex items-center gap-2 mb-6 font-bold text-slate-700 text-sm">
+                    <UserPlus className="text-orange-500 w-5 h-5" /> 現在の追加受入可能枠
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {capacityPerCourse.map(c => (
+                      <div key={c.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-100 text-center transition-all hover:border-orange-200">
+                        <p className="text-[10px] text-slate-400 font-bold mb-1 truncate">{c.label}</p>
+                        <p className="text-2xl font-black text-slate-800">+{c.count}<span className="text-[10px] ml-0.5">名</span></p>
                       </div>
-                    </div>
-                    <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-[2rem] p-6 text-center min-w-[140px]">
-                      <p className="text-[10px] font-bold mb-1 opacity-80 uppercase tracking-widest">Coverage</p>
-                      <p className="text-4xl font-black">{coverageRate}%</p>
-                    </div>
+                    ))}
                   </div>
+                </div>
 
-                  {/* 追加受入枠 */}
-                  <div className="bg-white rounded-3xl border border-slate-200 p-6">
-                     <div className="flex items-center gap-2 mb-6 font-bold text-slate-700 text-sm">
-                        <UserPlus className="text-orange-500 w-5 h-5" /> 現在の追加受入可能枠
-                     </div>
-                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {capacityPerCourse.map(c => (
-                           <div key={c.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-100 text-center transition-all hover:border-orange-200">
-                              <p className="text-[10px] text-slate-400 font-bold mb-1 truncate">{c.label}</p>
-                              <p className="text-2xl font-black text-slate-800">+{c.count}<span className="text-[10px] ml-0.5">名</span></p>
-                           </div>
-                        ))}
-                     </div>
+                {/* 管理者用コメント欄（最新投稿へのフィードバック） */}
+                <div className="mt-12 space-y-6 text-left">
+                  <h3 className="text-xl font-black text-slate-800 flex items-center gap-3"><MessageSquare className="text-orange-500" /> 学習記録へのフィードバック</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {learningRecords.slice(0, 4).map(record => (
+                      <div key={record.id} className="bg-white p-6 rounded-3xl border border-slate-200 space-y-4 shadow-sm group">
+                        <div className="flex justify-between items-start min-w-0">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest truncate">{record.studentName} | {new Date(record.date).toLocaleDateString()}</p>
+                            <h4 className="font-black text-slate-800 truncate">{record.title}</h4>
+                          </div>
+                        </div>
+                        <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">{record.content}</p>
+                        <div className="pt-4 border-t border-slate-50 flex gap-2">
+                          <input
+                            type="text"
+                            defaultValue={record.comment}
+                            onBlur={(e) => setAdminComment({ ...adminComment, [record.id]: e.target.value })}
+                            className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs font-bold outline-none focus:bg-white"
+                            placeholder="コメントを入力..."
+                          />
+                          <button onClick={() => submitAdminComment(record.id)} className="bg-slate-900 text-white p-2 rounded-xl hover:bg-orange-600 transition-all"><ChevronRight size={18} /></button>
+                        </div>
+                      </div>
+                    ))}
+                    {learningRecords.length === 0 && <div className="md:col-span-2 py-10 bg-slate-50 rounded-3xl border border-dashed border-slate-200 text-center text-slate-400 text-sm font-bold">まだ学習記録の投稿はありません</div>}
                   </div>
-
-                  {/* 管理者用コメント欄（最新投稿へのフィードバック） */}
-                  <div className="mt-12 space-y-6 text-left">
-                     <h3 className="text-xl font-black text-slate-800 flex items-center gap-3"><MessageSquare className="text-orange-500" /> 学習記録へのフィードバック</h3>
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {learningRecords.slice(0, 4).map(record => (
-                           <div key={record.id} className="bg-white p-6 rounded-3xl border border-slate-200 space-y-4 shadow-sm group">
-                              <div className="flex justify-between items-start min-w-0">
-                                 <div className="min-w-0 flex-1">
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest truncate">{record.studentName} | {new Date(record.date).toLocaleDateString()}</p>
-                                    <h4 className="font-black text-slate-800 truncate">{record.title}</h4>
-                                 </div>
-                              </div>
-                              <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">{record.content}</p>
-                              <div className="pt-4 border-t border-slate-50 flex gap-2">
-                                 <input 
-                                    type="text" 
-                                    defaultValue={record.comment}
-                                    onBlur={(e)=>setAdminComment({...adminComment, [record.id]: e.target.value})}
-                                    className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs font-bold outline-none focus:bg-white" 
-                                    placeholder="コメントを入力..." 
-                                 />
-                                 <button onClick={()=>submitAdminComment(record.id)} className="bg-slate-900 text-white p-2 rounded-xl hover:bg-orange-600 transition-all"><ChevronRight size={18} /></button>
-                              </div>
-                           </div>
-                        ))}
-                        {learningRecords.length === 0 && <div className="md:col-span-2 py-10 bg-slate-50 rounded-3xl border border-dashed border-slate-200 text-center text-slate-400 text-sm font-bold">まだ学習記録の投稿はありません</div>}
-                     </div>
-                  </div>
-               </div>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -629,7 +629,7 @@ const App = () => {
                   </div>
                 </div>
                 <p className="text-[9px] text-slate-400 text-center">※この情報は一度閉じると再表示できません。必ずメモを控えてください。</p>
-                <button onClick={()=>setGeneratedCreds(null)} className="w-full bg-orange-600 text-xs font-black py-2 rounded-xl transition-all hover:bg-orange-700 uppercase tracking-[0.2em]">内容を確認して閉じる</button>
+                <button onClick={() => setGeneratedCreds(null)} className="w-full bg-orange-600 text-xs font-black py-2 rounded-xl transition-all hover:bg-orange-700 uppercase tracking-[0.2em]">内容を確認して閉じる</button>
               </div>
             )}
 
@@ -639,27 +639,27 @@ const App = () => {
                 <form onSubmit={saveStudent} className="space-y-4">
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">氏名</label>
-                    <input type="text" required value={studentForm.name} onChange={e=>setStudentForm({...studentForm, name: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold" />
+                    <input type="text" required value={studentForm.name} onChange={e => setStudentForm({ ...studentForm, name: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold" />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">学校</label>
-                      <input type="text" value={studentForm.school} onChange={e=>setStudentForm({...studentForm, school: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold" />
+                      <input type="text" value={studentForm.school} onChange={e => setStudentForm({ ...studentForm, school: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold" />
                     </div>
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">年齢</label>
-                      <input type="number" value={studentForm.age} onChange={e=>setStudentForm({...studentForm, age: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold" />
+                      <input type="number" value={studentForm.age} onChange={e => setStudentForm({ ...studentForm, age: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold" />
                     </div>
                   </div>
                   <div className="space-y-1">
-                     <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">次回の授業日</label>
-                     <input type="date" value={studentForm.nextClassDate} onChange={e=>setStudentForm({...studentForm, nextClassDate: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold outline-none" />
+                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">次回の授業日</label>
+                    <input type="date" value={studentForm.nextClassDate} onChange={e => setStudentForm({ ...studentForm, nextClassDate: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold outline-none" />
                   </div>
                   <div className="space-y-1">
-                     <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">受講プラン</label>
-                     <select value={studentForm.courseId} onChange={e=>setStudentForm({...studentForm, courseId: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold outline-none appearance-none">
-                        {COURSE_BASES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
-                     </select>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">受講プラン</label>
+                    <select value={studentForm.courseId} onChange={e => setStudentForm({ ...studentForm, courseId: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold outline-none appearance-none">
+                      {COURSE_BASES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+                    </select>
                   </div>
                   <button type="submit" className="w-full bg-orange-600 text-white font-black py-4 rounded-xl shadow-lg hover:bg-orange-700 transition-all flex items-center justify-center gap-2 active:scale-95">
                     {editingStudent ? <Edit2 size={18} /> : <UserPlus size={18} />}
@@ -672,20 +672,20 @@ const App = () => {
                 {students.map(s => (
                   <div key={s.id} className="bg-white p-6 rounded-3xl border border-slate-200 group hover:border-orange-500 transition-all flex flex-col justify-between shadow-sm relative overflow-hidden text-left">
                     <div className="absolute top-0 right-0 p-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                       <button onClick={()=>{setEditingStudent(s); setStudentForm(s); window.scrollTo(0,0);}} className="p-2 bg-slate-50 text-slate-400 hover:text-orange-600 rounded-lg"><Edit2 size={14} /></button>
-                       <button onClick={async()=>{if(window.confirm('削除しますか？')){await deleteDoc(doc(db,'artifacts',appId,'public','data','students',s.id));}}} className="p-2 bg-slate-50 text-slate-400 hover:text-rose-500 rounded-lg"><Trash2 size={14} /></button>
+                      <button onClick={() => { setEditingStudent(s); setStudentForm(s); window.scrollTo(0, 0); }} className="p-2 bg-slate-50 text-slate-400 hover:text-orange-600 rounded-lg"><Edit2 size={14} /></button>
+                      <button onClick={async () => { if (window.confirm('削除しますか？')) { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'students', s.id)); } }} className="p-2 bg-slate-50 text-slate-400 hover:text-rose-500 rounded-lg"><Trash2 size={14} /></button>
                     </div>
                     <div>
                       <h4 className="font-black text-xl text-slate-800">{s.name}</h4>
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{s.school} | {s.age}歳</p>
                       <div className="mt-4 flex flex-wrap gap-2">
-                         <div className="bg-orange-50 px-3 py-1 rounded-full text-orange-600 text-[10px] font-black border border-orange-100 flex items-center gap-1.5"><Clock size={10} /> 次回: {s.nextClassDate || '未設定'}</div>
-                         <div className="bg-slate-50 px-3 py-1 rounded-full text-slate-500 text-[10px] font-black border border-slate-100">{COURSE_BASES.find(c=>c.id===s.courseId)?.label}</div>
+                        <div className="bg-orange-50 px-3 py-1 rounded-full text-orange-600 text-[10px] font-black border border-orange-100 flex items-center gap-1.5"><Clock size={10} /> 次回: {s.nextClassDate || '未設定'}</div>
+                        <div className="bg-slate-50 px-3 py-1 rounded-full text-slate-500 text-[10px] font-black border border-slate-100">{COURSE_BASES.find(c => c.id === s.courseId)?.label}</div>
                       </div>
                     </div>
                     <div className="mt-6 pt-4 border-t border-slate-50 grid grid-cols-2 gap-2 text-[10px] font-bold">
-                       <div className="text-slate-400">生徒ID: <span className="text-slate-900 select-all">{s.studentLoginId}</span></div>
-                       <div className="text-slate-400">保護者ID: <span className="text-slate-900 select-all">{s.parentLoginId}</span></div>
+                      <div className="text-slate-400">生徒ID: <span className="text-slate-900 select-all">{s.studentLoginId}</span></div>
+                      <div className="text-slate-400">保護者ID: <span className="text-slate-900 select-all">{s.parentLoginId}</span></div>
                     </div>
                   </div>
                 ))}
@@ -703,9 +703,9 @@ const App = () => {
               <div className="md:col-span-1 bg-white rounded-3xl border border-slate-200 p-6 space-y-6">
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">新規投稿</h3>
                 <form onSubmit={postAnnouncement} className="space-y-4">
-                  <input type="text" required value={announcementForm.title} onChange={e=>setAnnouncementForm({...announcementForm, title:e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold" placeholder="タイトル" />
-                  <textarea required value={announcementForm.content} onChange={e=>setAnnouncementForm({...announcementForm, content:e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm h-32 resize-none" placeholder="本文を入力してください..." />
-                  <select value={announcementForm.type} onChange={e=>setAnnouncementForm({...announcementForm, type:e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold outline-none">
+                  <input type="text" required value={announcementForm.title} onChange={e => setAnnouncementForm({ ...announcementForm, title: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold" placeholder="タイトル" />
+                  <textarea required value={announcementForm.content} onChange={e => setAnnouncementForm({ ...announcementForm, content: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm h-32 resize-none" placeholder="本文を入力してください..." />
+                  <select value={announcementForm.type} onChange={e => setAnnouncementForm({ ...announcementForm, type: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold outline-none">
                     <option value="info">通常のお知らせ</option>
                     <option value="emergency">緊急・重要連絡</option>
                   </select>
@@ -717,13 +717,13 @@ const App = () => {
                   <div key={notice.id} className="bg-white p-6 rounded-[2rem] border border-slate-200 flex justify-between items-start group shadow-sm text-left">
                     <div className="min-w-0">
                       <div className="flex items-center gap-3 mb-2">
-                         <span className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest ${notice.type === 'emergency' ? 'bg-rose-100 text-rose-600' : 'bg-orange-100 text-orange-600'}`}>{notice.type}</span>
-                         <span className="text-[10px] font-bold text-slate-400">{notice.createdAt?.toDate().toLocaleDateString()}</span>
+                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest ${notice.type === 'emergency' ? 'bg-rose-100 text-rose-600' : 'bg-orange-100 text-orange-600'}`}>{notice.type}</span>
+                        <span className="text-[10px] font-bold text-slate-400">{notice.createdAt?.toDate().toLocaleDateString()}</span>
                       </div>
                       <h4 className="font-black text-slate-800 text-lg truncate">{notice.title}</h4>
                       <p className="text-sm text-slate-500 mt-2 leading-relaxed">{notice.content}</p>
                     </div>
-                    <button onClick={async()=>{await deleteDoc(doc(db,'artifacts',appId,'public','data','announcements',notice.id));}} className="text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all shrink-0 ml-4"><Trash2 size={18} /></button>
+                    <button onClick={async () => { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'announcements', notice.id)); }} className="text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all shrink-0 ml-4"><Trash2 size={18} /></button>
                   </div>
                 ))}
               </div>
@@ -740,14 +740,14 @@ const App = () => {
                 <p className="text-slate-400 text-sm font-medium mt-1">{currentUser.role === 'student' ? '今日学んだことを記録して成長を残しましょう。' : `${currentUser.childName}さんの学習と作品の歩みです。`}</p>
               </div>
               <div className="w-full md:w-auto grid grid-cols-2 gap-4">
-                 <div className="bg-white p-5 rounded-[1.5rem] border border-slate-200 shadow-xl flex flex-col justify-center">
-                   <p className="text-[10px] font-black text-slate-400 uppercase mb-1 flex items-center gap-1.5"><Clock size={12} className="text-orange-500" /> 次回の授業日</p>
-                   <p className="text-xl font-black text-slate-800">{currentUser.nextClassDate || '未設定'}</p>
-                 </div>
-                 <div className="bg-orange-600 p-5 rounded-[1.5rem] text-white shadow-xl shadow-orange-100 flex flex-col justify-center">
-                   <p className="text-[10px] font-black uppercase mb-1 opacity-60">今月の支援軽減額</p>
-                   <p className="text-xl font-black tracking-tighter">¥{reductionPerStudent.toLocaleString()}</p>
-                 </div>
+                <div className="bg-white p-5 rounded-[1.5rem] border border-slate-200 shadow-xl flex flex-col justify-center">
+                  <p className="text-[10px] font-black text-slate-400 uppercase mb-1 flex items-center gap-1.5"><Clock size={12} className="text-orange-500" /> 次回の授業日</p>
+                  <p className="text-xl font-black text-slate-800">{currentUser.nextClassDate || '未設定'}</p>
+                </div>
+                <div className="bg-orange-600 p-5 rounded-[1.5rem] text-white shadow-xl shadow-orange-100 flex flex-col justify-center">
+                  <p className="text-[10px] font-black uppercase mb-1 opacity-60">今月の支援軽減額</p>
+                  <p className="text-xl font-black tracking-tighter">¥{reductionPerStudent.toLocaleString()}</p>
+                </div>
               </div>
             </header>
 
@@ -758,16 +758,16 @@ const App = () => {
                   <div className="flex items-center gap-2 font-bold text-slate-700 text-xs uppercase tracking-widest"><BookOpen size={16} className="text-orange-500" /> 学習・制作を記録</div>
                   <form onSubmit={submitLearningRecord} className="space-y-4 text-left">
                     <div className="space-y-1">
-                       <label className="text-[10px] font-bold text-slate-400 ml-1 uppercase">Title</label>
-                       <input type="text" value={newLearningRecord.title} onChange={e=>setNewLearningRecord({...newLearningRecord, title:e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold focus:ring-2 focus:ring-orange-500 outline-none" placeholder="今日の課題など" required />
+                      <label className="text-[10px] font-bold text-slate-400 ml-1 uppercase">Title</label>
+                      <input type="text" value={newLearningRecord.title} onChange={e => setNewLearningRecord({ ...newLearningRecord, title: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold focus:ring-2 focus:ring-orange-500 outline-none" placeholder="今日の課題など" required />
                     </div>
                     <div className="space-y-1">
-                       <label className="text-[10px] font-bold text-slate-400 ml-1 uppercase">Message</label>
-                       <textarea value={newLearningRecord.content} onChange={e=>setNewLearningRecord({...newLearningRecord, content:e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm h-32 resize-none focus:ring-2 focus:ring-orange-500 outline-none" placeholder="学んだことや感想..." required />
+                      <label className="text-[10px] font-bold text-slate-400 ml-1 uppercase">Message</label>
+                      <textarea value={newLearningRecord.content} onChange={e => setNewLearningRecord({ ...newLearningRecord, content: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm h-32 resize-none focus:ring-2 focus:ring-orange-500 outline-none" placeholder="学んだことや感想..." required />
                     </div>
                     <div className="space-y-1">
-                       <label className="text-[10px] font-bold text-slate-400 ml-1 uppercase text-left">Portfolio URL (Option)</label>
-                       <input type="text" value={newLearningRecord.imageUrl} onChange={e=>setNewLearningRecord({...newLearningRecord, imageUrl:e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs" placeholder="画像や作品のURL" />
+                      <label className="text-[10px] font-bold text-slate-400 ml-1 uppercase text-left">Portfolio URL (Option)</label>
+                      <input type="text" value={newLearningRecord.imageUrl} onChange={e => setNewLearningRecord({ ...newLearningRecord, imageUrl: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs" placeholder="画像や作品のURL" />
                     </div>
                     <button type="submit" className="w-full bg-orange-600 text-white font-black py-4 rounded-2xl shadow-lg hover:bg-orange-700 transition-all flex items-center justify-center gap-2 active:scale-95"><Plus size={20} /> 記録を保存</button>
                   </form>
@@ -777,17 +777,17 @@ const App = () => {
               {/* タイムライン */}
               <div className={`${currentUser.role === 'student' ? 'lg:col-span-3' : 'lg:col-span-4'} space-y-6 text-left`}>
                 <h3 className="text-xl font-black text-slate-800 flex items-center gap-3">
-                   <ImageIcon size={22} className="text-orange-500" /> 学習・制作のポートフォリオ
+                  <ImageIcon size={22} className="text-orange-500" /> 学習・制作のポートフォリオ
                 </h3>
                 {learningRecords.length === 0 ? (
                   <div className="bg-white rounded-3xl border border-dashed border-slate-200 p-20 text-center text-slate-400 font-bold uppercase tracking-widest text-xs">No records recorded yet</div>
                 ) : (
                   <div className="grid grid-cols-1 gap-6">
-                    {learningRecords.sort((a,b) => b.date.localeCompare(a.date)).map(record => (
+                    {learningRecords.sort((a, b) => b.date.localeCompare(a.date)).map(record => (
                       <div key={record.id} className="bg-white rounded-[2rem] border border-slate-200 overflow-hidden flex flex-col md:flex-row shadow-sm hover:shadow-md transition-all text-left group">
                         {record.imageUrl && (
                           <div className="md:w-72 h-56 md:h-auto bg-slate-100 flex-shrink-0 relative overflow-hidden">
-                            <img src={record.imageUrl} alt="成果物" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" onError={(e)=>{e.target.src='https://images.unsplash.com/photo-1488190211105-8b0e65b80b4e?auto=format&fit=crop&q=80&w=400';}} />
+                            <img src={record.imageUrl} alt="成果物" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1488190211105-8b0e65b80b4e?auto=format&fit=crop&q=80&w=400'; }} />
                           </div>
                         )}
                         <div className="p-8 flex-1 space-y-5 flex flex-col">
@@ -797,18 +797,18 @@ const App = () => {
                               <h4 className="text-2xl font-black text-slate-800 truncate leading-tight">{record.title}</h4>
                             </div>
                             {currentUser.role === 'student' && (
-                               <button onClick={async()=>{if(window.confirm('削除しますか？')){await deleteDoc(doc(db,'artifacts',appId,'public','data','learning_records',record.id));}}} className="p-2 text-slate-300 hover:text-rose-500 transition-colors shrink-0"><Trash2 size={16} /></button>
+                              <button onClick={async () => { if (window.confirm('削除しますか？')) { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'learning_records', record.id)); } }} className="p-2 text-slate-300 hover:text-rose-500 transition-colors shrink-0"><Trash2 size={16} /></button>
                             )}
                           </div>
                           <p className="text-sm text-slate-500 leading-relaxed font-medium whitespace-pre-wrap flex-grow">{record.content}</p>
-                          
+
                           {/* 管理者コメント */}
                           {record.comment && (
-                             <div className="mt-4 bg-orange-50/70 border border-orange-100 p-5 rounded-2xl relative">
-                                <div className="absolute top-0 left-8 -translate-y-1/2 w-4 h-4 bg-orange-50/70 border-t border-l border-orange-100 rotate-45"></div>
-                                <div className="flex items-center gap-2 text-orange-600 font-black text-[10px] uppercase tracking-widest mb-2"><MessageSquare size={12} /> Administrator Feedback</div>
-                                <p className="text-sm text-slate-700 font-bold italic leading-relaxed">"{record.comment}"</p>
-                             </div>
+                            <div className="mt-4 bg-orange-50/70 border border-orange-100 p-5 rounded-2xl relative">
+                              <div className="absolute top-0 left-8 -translate-y-1/2 w-4 h-4 bg-orange-50/70 border-t border-l border-orange-100 rotate-45"></div>
+                              <div className="flex items-center gap-2 text-orange-600 font-black text-[10px] uppercase tracking-widest mb-2"><MessageSquare size={12} /> Administrator Feedback</div>
+                              <p className="text-sm text-slate-700 font-bold italic leading-relaxed">"{record.comment}"</p>
+                            </div>
                           )}
                         </div>
                       </div>
@@ -833,7 +833,7 @@ const App = () => {
         .animate-bounce-slow { animation: bounce 3s infinite ease-in-out; }
         .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
         .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-        @media (max-width: 640px) { input[type="month"] { font-size: 10px; } }
+
       `}</style>
     </div>
   );
