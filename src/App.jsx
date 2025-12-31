@@ -59,16 +59,16 @@ import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged }
 import { getFirestore, doc, setDoc, deleteDoc, collection, onSnapshot, query, serverTimestamp, addDoc, updateDoc, getDocs, where } from 'firebase/firestore';
 
 // --- Firebase Configuration ---
-const firebaseConfig = typeof __firebase_config !== 'undefined' 
-  ? JSON.parse(__firebase_config) 
+const firebaseConfig = typeof __firebase_config !== 'undefined'
+  ? JSON.parse(__firebase_config)
   : {
-      apiKey: "AIzaSyArYfL-wE_F0OF3QNl5_jh_B7ZXr7Ev5fg",
-      authDomain: "creatte-sponser-app.firebaseapp.com",
-      projectId: "creatte-sponser-app",
-      storageBucket: "creatte-sponser-app.firebasestorage.app",
-      messagingSenderId: "753873131194",
-      appId: "1:753873131194:web:496a6913a523139c7e1483"
-    };
+    apiKey: "AIzaSyArYfL-wE_F0OF3QNl5_jh_B7ZXr7Ev5fg",
+    authDomain: "creatte-sponser-app.firebaseapp.com",
+    projectId: "creatte-sponser-app",
+    storageBucket: "creatte-sponser-app.firebasestorage.app",
+    messagingSenderId: "753873131194",
+    appId: "1:753873131194:web:496a6913a523139c7e1483"
+  };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -91,7 +91,7 @@ const generateCredentials = () => {
 
 const App = () => {
   // --- Auth & Role State ---
-  const [currentUser, setCurrentUser] = useState(null); 
+  const [currentUser, setCurrentUser] = useState(null);
   const [loginId, setLoginId] = useState('');
   const [password, setPassword] = useState('');
   const [authError, setAuthError] = useState('');
@@ -117,7 +117,7 @@ const App = () => {
 
   // --- フォーム状態 ---
   const [editingStudent, setEditingStudent] = useState(null);
-  const [studentForm, setStudentForm] = useState({ 
+  const [studentForm, setStudentForm] = useState({
     name: '', school: '', age: '', courseId: 'premium', remarks: '', nextClassDate: '',
     studentLoginId: '', studentPassword: '', parentLoginId: '', parentPassword: ''
   });
@@ -192,7 +192,7 @@ const App = () => {
   const availableSurplusTotal = (totalBaseRevenue + sponsorshipTotal) - (totalOperatingCost + bufferAmountValue);
   const reductionPerStudentVal = totalStudentsCount === 0 ? 0 : Math.max(0, Math.floor(availableSurplusTotal / totalStudentsCount / 1000) * 1000);
   const coverageRatePercentage = Math.min(100, totalOperatingCost > 0 ? Math.round((sponsorshipTotal / totalOperatingCost) * 100) : 0);
-  
+
   const finalNetSurplusVal = availableSurplusTotal - (reductionPerStudentVal * totalStudentsCount);
   const capacityPerCourseList = useMemo(() => {
     const pool = finalNetSurplusVal + bufferAmountValue;
@@ -366,54 +366,54 @@ const App = () => {
   const MaterialDetailView = () => {
     if (!selectedMaterial) return null;
     const isScratch = selectedMaterial.type === 'scratch';
-    
+
     return (
       <div className="fixed inset-0 z-[60] bg-slate-900 flex flex-col text-left animate-in slide-in-from-bottom duration-500">
         {/* スプリットビュー・ヘッダー */}
         <div className="bg-slate-800 p-3 md:p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between border-b border-slate-700 gap-4 text-left">
-           <div className="flex items-center gap-3 text-left">
-              <button onClick={() => setSelectedMaterial(null)} className="p-2 bg-slate-700 text-white rounded-xl hover:bg-rose-600 transition-all text-left"><X size={20}/></button>
-              <h3 className="font-black text-white text-sm md:text-lg truncate max-w-[300px] text-left">{selectedMaterial.title}</h3>
-           </div>
-           <div className="flex items-center justify-between md:justify-end gap-3 bg-slate-900/50 p-3 rounded-2xl border border-slate-700 text-left">
-              <div className="flex flex-col text-left">
-                 <p className="text-[8px] md:text-[9px] font-black text-orange-400 uppercase tracking-widest leading-none mb-1 font-sans text-left">Scratch/App Login Sync</p>
-                 <div className="flex gap-4 text-[10px] md:text-xs font-bold text-white font-sans text-left">
-                    <span>ID: <span className="text-orange-200 select-all">{currentUser?.loginId}</span></span>
-                    <span>PW: <span className="text-orange-200 select-all">{currentUser?.password}</span></span>
-                 </div>
+          <div className="flex items-center gap-3 text-left">
+            <button onClick={() => setSelectedMaterial(null)} className="p-2 bg-slate-700 text-white rounded-xl hover:bg-rose-600 transition-all text-left"><X size={20} /></button>
+            <h3 className="font-black text-white text-sm md:text-lg truncate max-w-[300px] text-left">{selectedMaterial.title}</h3>
+          </div>
+          <div className="flex items-center justify-between md:justify-end gap-3 bg-slate-900/50 p-3 rounded-2xl border border-slate-700 text-left">
+            <div className="flex flex-col text-left">
+              <p className="text-[8px] md:text-[9px] font-black text-orange-400 uppercase tracking-widest leading-none mb-1 font-sans text-left">Scratch/App Login Sync</p>
+              <div className="flex gap-4 text-[10px] md:text-xs font-bold text-white font-sans text-left">
+                <span>ID: <span className="text-orange-200 select-all">{currentUser?.loginId}</span></span>
+                <span>PW: <span className="text-orange-200 select-all">{currentUser?.password}</span></span>
               </div>
-              <button onClick={() => copyToClipboard(`ID: ${currentUser?.loginId}\nPW: ${currentUser?.password}`)} className={`p-2 rounded-lg transition-all ${isCopied ? 'bg-emerald-500 text-white' : 'bg-slate-700 text-slate-400 hover:text-white'}`}>{isCopied ? <CheckCircle2 size={16}/> : <Copy size={16}/>}</button>
-           </div>
+            </div>
+            <button onClick={() => copyToClipboard(`ID: ${currentUser?.loginId}\nPW: ${currentUser?.password}`)} className={`p-2 rounded-lg transition-all ${isCopied ? 'bg-emerald-500 text-white' : 'bg-slate-700 text-slate-400 hover:text-white'}`}>{isCopied ? <CheckCircle2 size={16} /> : <Copy size={16} />}</button>
+          </div>
         </div>
-        
+
         {/* スプリットビュー・メインレイアウト */}
         <div className={`flex flex-1 ${isScratch ? 'flex-col lg:flex-row' : 'flex-col'} overflow-hidden text-left`}>
-           {isScratch ? (
-             <>
-               {/* 左側: 教材資料 */}
-               <div className="w-full lg:w-[450px] bg-slate-50 border-r border-slate-700 flex flex-col overflow-hidden text-left">
-                  <div className="p-5 border-b border-slate-200 bg-white flex justify-between items-center shrink-0 text-left">
-                    <div className="text-left"><p className="text-[10px] font-bold text-orange-600 mb-0.5 uppercase font-sans text-left tracking-widest">Guide</p><h4 className="font-black text-slate-800 text-left">教材ドキュメント</h4></div>
-                    <a href={selectedMaterial.url} target="_blank" className="p-2 bg-slate-100 text-slate-500 rounded-lg hover:bg-orange-600 hover:text-white transition-all text-left"><ExternalLink size={16}/></a>
-                  </div>
-                  <div className="flex-1 overflow-y-auto bg-white text-left">
-                    <iframe src={selectedMaterial.url} className="w-full h-full border-none text-left" title="Material View" />
-                  </div>
-                  <div className="p-4 bg-orange-600 text-white text-[10px] font-bold text-center uppercase tracking-[0.2em] shrink-0">
-                    保存は必ず「ファイル」→「コンピューターに保存」を選択してください
-                  </div>
-               </div>
-               {/* 右側: Scratchエディタ */}
-               <div className="flex-1 bg-white relative text-left">
-                  <iframe src="https://turbowarp.org/editor?embed" className="w-full h-full border-none text-left" title="Scratch Editor" allowTransparency="true" allowFullScreen="true" sandbox="allow-scripts allow-same-origin allow-popups allow-forms" />
-               </div>
-             </>
-           ) : (
-             <div className="flex-1 bg-white text-left">
-                <iframe src={selectedMaterial.url} className="w-full h-full border-none shadow-inner text-left" title="Full Material" />
-             </div>
-           )}
+          {isScratch ? (
+            <>
+              {/* 左側: 教材資料 */}
+              <div className="w-full lg:w-[450px] bg-slate-50 border-r border-slate-700 flex flex-col overflow-hidden text-left">
+                <div className="p-5 border-b border-slate-200 bg-white flex justify-between items-center shrink-0 text-left">
+                  <div className="text-left"><p className="text-[10px] font-bold text-orange-600 mb-0.5 uppercase font-sans text-left tracking-widest">Guide</p><h4 className="font-black text-slate-800 text-left">教材ドキュメント</h4></div>
+                  <a href={selectedMaterial.url} target="_blank" className="p-2 bg-slate-100 text-slate-500 rounded-lg hover:bg-orange-600 hover:text-white transition-all text-left"><ExternalLink size={16} /></a>
+                </div>
+                <div className="flex-1 overflow-y-auto bg-white text-left">
+                  <iframe src={selectedMaterial.url} className="w-full h-full border-none text-left" title="Material View" />
+                </div>
+                <div className="p-4 bg-orange-600 text-white text-[10px] font-bold text-center uppercase tracking-[0.2em] shrink-0">
+                  保存は必ず「ファイル」→「コンピューターに保存」を選択してください
+                </div>
+              </div>
+              {/* 右側: Scratchエディタ */}
+              <div className="flex-1 bg-white relative text-left">
+                <iframe src="https://turbowarp.org/editor?embed" className="w-full h-full border-none text-left" title="Scratch Editor" allowTransparency="true" allowFullScreen="true" sandbox="allow-scripts allow-same-origin allow-popups allow-forms" />
+              </div>
+            </>
+          ) : (
+            <div className="flex-1 bg-white text-left">
+              <iframe src={selectedMaterial.url} className="w-full h-full border-none shadow-inner text-left" title="Full Material" />
+            </div>
+          )}
         </div>
       </div>
     );
@@ -443,20 +443,20 @@ const App = () => {
             </div>
           </div>
           <section className="grid grid-cols-1 md:grid-cols-4 gap-6 text-left">
-             <div className="md:col-span-1 bg-orange-600 p-8 rounded-[2rem] text-white flex flex-col items-center justify-center text-center">
-                <p className="text-[10px] font-bold uppercase tracking-widest mb-4 opacity-80 font-sans">Coverage Rate</p>
-                <div className="relative w-32 h-32">
-                  <svg viewBox="0 0 36 36" className="w-full h-full transform -rotate-90">
-                    <circle cx="18" cy="18" r="16" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="3" />
-                    <circle cx="18" cy="18" r="16" fill="none" stroke="white" strokeWidth="3" strokeDasharray={`${coverageRatePercentage} 100`} strokeLinecap="round" />
-                  </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center font-black text-3xl">{coverageRatePercentage}%</div>
-                </div>
-             </div>
-             <div className="md:col-span-3 grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
-                <div className="bg-slate-50 p-8 rounded-[2rem] border border-slate-100 text-left"><p className="text-xs font-bold text-slate-400 mb-2 uppercase text-left font-sans">Total Sponsorship</p><p className="text-4xl font-black text-slate-900 tracking-tighter text-left font-sans">¥{sponsorshipTotal.toLocaleString()}</p></div>
-                <div className="bg-slate-50 p-8 rounded-[2rem] border border-slate-100 text-left"><p className="text-xs font-bold text-slate-400 mb-2 uppercase text-left font-sans">Benefit per child</p><p className="text-4xl font-black text-orange-600 tracking-tighter text-left font-sans">¥{reductionPerStudentVal.toLocaleString()}</p></div>
-             </div>
+            <div className="md:col-span-1 bg-orange-600 p-8 rounded-[2rem] text-white flex flex-col items-center justify-center text-center">
+              <p className="text-[10px] font-bold uppercase tracking-widest mb-4 opacity-80 font-sans">Coverage Rate</p>
+              <div className="relative w-32 h-32">
+                <svg viewBox="0 0 36 36" className="w-full h-full transform -rotate-90">
+                  <circle cx="18" cy="18" r="16" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="3" />
+                  <circle cx="18" cy="18" r="16" fill="none" stroke="white" strokeWidth="3" strokeDasharray={`${coverageRatePercentage} 100`} strokeLinecap="round" />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center font-black text-3xl">{coverageRatePercentage}%</div>
+              </div>
+            </div>
+            <div className="md:col-span-3 grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
+              <div className="bg-slate-50 p-8 rounded-[2rem] border border-slate-100 text-left"><p className="text-xs font-bold text-slate-400 mb-2 uppercase text-left font-sans">Total Sponsorship</p><p className="text-4xl font-black text-slate-900 tracking-tighter text-left font-sans">¥{sponsorshipTotal.toLocaleString()}</p></div>
+              <div className="bg-slate-50 p-8 rounded-[2rem] border border-slate-100 text-left"><p className="text-xs font-bold text-slate-400 mb-2 uppercase text-left font-sans">Benefit per child</p><p className="text-4xl font-black text-orange-600 tracking-tighter text-left font-sans">¥{reductionPerStudentVal.toLocaleString()}</p></div>
+            </div>
           </section>
           <section className="text-left space-y-6">
             <div className="flex items-center gap-2 font-bold text-xl border-l-4 border-orange-500 pl-4 text-left">資金使途の詳細</div>
@@ -546,71 +546,71 @@ const App = () => {
             <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-left">
               <div className="text-left"><h2 className="text-2xl font-black tracking-tight text-left">受講料・協賛金分析</h2><p className="text-slate-400 text-sm font-medium text-left">運営コストと支援インパクトの統合ダッシュボード</p></div>
               <div className="flex gap-2 text-left">
-                 <button onClick={() => setShowReport(true)} className="bg-orange-600 text-white px-5 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:scale-105 transition-all shadow-lg shadow-orange-100 text-sm uppercase tracking-tighter font-sans"><FileText size={18} /> REPORT</button>
-                 <div className="bg-white border border-slate-200 rounded-xl px-2 flex items-center gap-2 text-left shadow-sm"><input type="month" value={recordMonth} onChange={e=>setRecordMonth(e.target.value)} className="py-2 text-xs font-bold outline-none bg-transparent font-sans" /><button onClick={recordMonthlyStatusToDb} className="text-[10px] font-black text-orange-600 px-2 uppercase font-sans">SAVE</button></div>
+                <button onClick={() => setShowReport(true)} className="bg-orange-600 text-white px-5 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:scale-105 transition-all shadow-lg shadow-orange-100 text-sm uppercase tracking-tighter font-sans"><FileText size={18} /> REPORT</button>
+                <div className="bg-white border border-slate-200 rounded-xl px-2 flex items-center gap-2 text-left shadow-sm"><input type="month" value={recordMonth} onChange={e => setRecordMonth(e.target.value)} className="py-2 text-xs font-bold outline-none bg-transparent font-sans" /><button onClick={recordMonthlyStatusToDb} className="text-[10px] font-black text-orange-600 px-2 uppercase font-sans">SAVE</button></div>
               </div>
             </header>
             <TrendChart />
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 text-left items-start">
-               <div className="space-y-6 text-left">
-                  <div className="bg-white rounded-3xl border border-slate-200 p-6 space-y-4 text-left shadow-sm">
-                     <div className="flex items-center gap-2 font-bold text-slate-700 text-xs uppercase tracking-widest text-left font-sans"><Settings2 size={14} className="text-orange-500" /> Operational Costs</div>
-                     {Object.entries(costs).map(([key, value]) => (
-                        <div key={key} className="text-left"><label className="text-[10px] font-bold text-slate-400 block mb-1 uppercase tracking-widest text-left font-sans">{key}</label><input type="number" value={value} onChange={e=>handleCostChange(key, e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-left outline-none focus:ring-2 focus:ring-orange-500 transition-all font-sans" /></div>
-                     ))}
-                     <div className="pt-4 border-t border-dashed flex justify-between font-black text-left"><span className="text-xs text-slate-400 uppercase tracking-widest text-left font-sans">Total Cost</span><span className="text-orange-600 text-right font-sans">¥{totalOperatingCost.toLocaleString()}</span></div>
-                  </div>
-                  <div className="bg-orange-600 text-white rounded-3xl p-6 space-y-4 shadow-xl text-left">
-                     <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-widest opacity-80 text-left font-sans"><ShieldCheck size={14} /> Buffer Margin</div>
-                     <input type="range" min="0" max="20" step="1" value={bufferStudentTarget} onChange={e=>setBufferStudentTarget(parseInt(e.target.value))} className="w-full h-1.5 bg-orange-400 rounded-full appearance-none accent-white cursor-pointer" />
-                     <div className="flex justify-between font-black text-left font-sans"><span className="text-[10px] text-left uppercase">Margin: {bufferStudentTarget} Pax</span><span className="text-lg text-right tracking-tight font-sans">¥{bufferAmountValue.toLocaleString()}</span></div>
-                  </div>
-               </div>
-               <div className="lg:col-span-2 space-y-6 text-left">
-                  <div className="bg-white rounded-3xl border border-slate-200 p-8 relative overflow-hidden shadow-sm text-left">
-                     <div className="absolute top-0 right-0 p-4 opacity-5 text-left"><Coins size={120} /></div>
-                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 text-left font-sans tracking-widest">Total Monthly Sponsorship Sum</p>
-                     <p className="text-5xl font-black text-orange-600 tracking-tighter text-left font-sans">¥{sponsorshipTotal.toLocaleString()}</p>
-                     <p className="text-[10px] text-slate-400 font-bold mt-4 italic text-left">※協賛企業管理タブで登録された {sponsors.length} 社の合計金額です。</p>
-                  </div>
-                  <div className="bg-orange-600 rounded-[2.5rem] p-10 text-white flex flex-col sm:flex-row items-center justify-between gap-8 shadow-2xl shadow-orange-100 text-left text-white">
-                    <div className="text-left text-white space-y-4">
-                      <p className="text-orange-100 text-[10px] font-bold uppercase mb-2 tracking-[0.2em] text-left font-sans">Reduction per child</p>
-                      <div className="flex items-center gap-4 text-left">
-                        <ArrowDownCircle size={48} className="text-orange-200 animate-bounce-slow" />
-                        <span className="text-5xl md:text-7xl font-black tracking-tighter text-left font-sans">¥{reductionPerStudentVal.toLocaleString()}</span>
-                      </div>
-                    </div>
-                    <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-[2rem] p-6 text-center min-w-[140px] text-left flex flex-col justify-center">
-                      <p className="text-[10px] font-bold mb-1 opacity-80 uppercase tracking-widest text-center text-white font-sans">Coverage</p>
-                      <p className="text-4xl font-black text-center text-white font-sans">{coverageRatePercentage}%</p>
+              <div className="space-y-6 text-left">
+                <div className="bg-white rounded-3xl border border-slate-200 p-6 space-y-4 text-left shadow-sm">
+                  <div className="flex items-center gap-2 font-bold text-slate-700 text-xs uppercase tracking-widest text-left font-sans"><Settings2 size={14} className="text-orange-500" /> Operational Costs</div>
+                  {Object.entries(costs).map(([key, value]) => (
+                    <div key={key} className="text-left"><label className="text-[10px] font-bold text-slate-400 block mb-1 uppercase tracking-widest text-left font-sans">{key}</label><input type="number" value={value} onChange={e => handleCostChange(key, e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-left outline-none focus:ring-2 focus:ring-orange-500 transition-all font-sans" /></div>
+                  ))}
+                  <div className="pt-4 border-t border-dashed flex justify-between font-black text-left"><span className="text-xs text-slate-400 uppercase tracking-widest text-left font-sans">Total Cost</span><span className="text-orange-600 text-right font-sans">¥{totalOperatingCost.toLocaleString()}</span></div>
+                </div>
+                <div className="bg-orange-600 text-white rounded-3xl p-6 space-y-4 shadow-xl text-left">
+                  <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-widest opacity-80 text-left font-sans"><ShieldCheck size={14} /> Buffer Margin</div>
+                  <input type="range" min="0" max="20" step="1" value={bufferStudentTarget} onChange={e => setBufferStudentTarget(parseInt(e.target.value))} className="w-full h-1.5 bg-orange-400 rounded-full appearance-none accent-white cursor-pointer" />
+                  <div className="flex justify-between font-black text-left font-sans"><span className="text-[10px] text-left uppercase">Margin: {bufferStudentTarget} Pax</span><span className="text-lg text-right tracking-tight font-sans">¥{bufferAmountValue.toLocaleString()}</span></div>
+                </div>
+              </div>
+              <div className="lg:col-span-2 space-y-6 text-left">
+                <div className="bg-white rounded-3xl border border-slate-200 p-8 relative overflow-hidden shadow-sm text-left">
+                  <div className="absolute top-0 right-0 p-4 opacity-5 text-left"><Coins size={120} /></div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 text-left font-sans tracking-widest">Total Monthly Sponsorship Sum</p>
+                  <p className="text-5xl font-black text-orange-600 tracking-tighter text-left font-sans">¥{sponsorshipTotal.toLocaleString()}</p>
+                  <p className="text-[10px] text-slate-400 font-bold mt-4 italic text-left">※協賛企業管理タブで登録された {sponsors.length} 社の合計金額です。</p>
+                </div>
+                <div className="bg-orange-600 rounded-[2.5rem] p-10 text-white flex flex-col sm:flex-row items-center justify-between gap-8 shadow-2xl shadow-orange-100 text-left text-white">
+                  <div className="text-left text-white space-y-4">
+                    <p className="text-orange-100 text-[10px] font-bold uppercase mb-2 tracking-[0.2em] text-left font-sans">Reduction per child</p>
+                    <div className="flex items-center gap-4 text-left">
+                      <ArrowDownCircle size={48} className="text-orange-200 animate-bounce-slow" />
+                      <span className="text-5xl md:text-7xl font-black tracking-tighter text-left font-sans">¥{reductionPerStudentVal.toLocaleString()}</span>
                     </div>
                   </div>
-                  
-                  {/* コース別価格カード（管理者ダッシュボード） */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
-                    {COURSE_BASES.map((course) => {
-                      const discountedPrice = Math.max(0, course.price - reductionPerStudentVal);
-                      const isFree = discountedPrice === 0;
-                      const enrolledCount = studentCountsFromDb[course.id] || 0;
-                      return (
-                        <div key={course.id} className="bg-white rounded-3xl border border-slate-200 p-6 flex flex-col justify-between hover:border-orange-200 transition-all shadow-sm text-left group">
-                          <div className="flex justify-between items-start mb-4 text-left">
-                            <div className="text-left">
-                              <h4 className="font-black text-slate-800 text-lg tracking-tight text-left">{course.label}</h4>
-                              <span className="text-[10px] text-slate-300 font-bold line-through text-left font-sans tracking-widest">¥{course.price.toLocaleString()}</span>
-                            </div>
-                            <span className="bg-slate-50 text-slate-400 text-[9px] font-black px-2 py-1 rounded-full uppercase text-left tracking-tighter group-hover:bg-orange-50 group-hover:text-orange-500 transition-colors font-sans">{enrolledCount} pax</span>
+                  <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-[2rem] p-6 text-center min-w-[140px] text-left flex flex-col justify-center">
+                    <p className="text-[10px] font-bold mb-1 opacity-80 uppercase tracking-widest text-center text-white font-sans">Coverage</p>
+                    <p className="text-4xl font-black text-center text-white font-sans">{coverageRatePercentage}%</p>
+                  </div>
+                </div>
+
+                {/* コース別価格カード（管理者ダッシュボード） */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
+                  {COURSE_BASES.map((course) => {
+                    const discountedPrice = Math.max(0, course.price - reductionPerStudentVal);
+                    const isFree = discountedPrice === 0;
+                    const enrolledCount = studentCountsFromDb[course.id] || 0;
+                    return (
+                      <div key={course.id} className="bg-white rounded-3xl border border-slate-200 p-6 flex flex-col justify-between hover:border-orange-200 transition-all shadow-sm text-left group">
+                        <div className="flex justify-between items-start mb-4 text-left">
+                          <div className="text-left">
+                            <h4 className="font-black text-slate-800 text-lg tracking-tight text-left">{course.label}</h4>
+                            <span className="text-[10px] text-slate-300 font-bold line-through text-left font-sans tracking-widest">¥{course.price.toLocaleString()}</span>
                           </div>
-                          <div className="text-left space-y-2">
-                            <div className="flex items-end gap-1 text-left"><span className={`text-2xl md:text-3xl font-black text-left font-sans ${isFree ? 'text-emerald-500' : 'text-slate-900'}`}>{isFree ? 'FREE' : `¥${discountedPrice.toLocaleString()}`}</span>{!isFree && <span className="text-[10px] text-slate-400 font-bold mb-1.5 text-left font-sans">/ mo</span>}</div>
-                            <div className="mt-2 h-1.5 w-full bg-slate-100 rounded-full overflow-hidden text-left"><div className="h-full bg-orange-500 transition-all duration-1000 text-left" style={{ width: `${Math.min(100, (reductionPerStudentVal / course.price) * 100)}%` }} /></div>
-                          </div>
+                          <span className="bg-slate-50 text-slate-400 text-[9px] font-black px-2 py-1 rounded-full uppercase text-left tracking-tighter group-hover:bg-orange-50 group-hover:text-orange-500 transition-colors font-sans">{enrolledCount} pax</span>
                         </div>
-                      );
-                    })}
-                  </div>
-               </div>
+                        <div className="text-left space-y-2">
+                          <div className="flex items-end gap-1 text-left"><span className={`text-2xl md:text-3xl font-black text-left font-sans ${isFree ? 'text-emerald-500' : 'text-slate-900'}`}>{isFree ? 'FREE' : `¥${discountedPrice.toLocaleString()}`}</span>{!isFree && <span className="text-[10px] text-slate-400 font-bold mb-1.5 text-left font-sans">/ mo</span>}</div>
+                          <div className="mt-2 h-1.5 w-full bg-slate-100 rounded-full overflow-hidden text-left"><div className="h-full bg-orange-500 transition-all duration-1000 text-left" style={{ width: `${Math.min(100, (reductionPerStudentVal / course.price) * 100)}%` }} /></div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -623,15 +623,15 @@ const App = () => {
               <div className="xl:col-span-1 bg-white rounded-3xl border border-slate-200 p-6 shadow-sm text-left">
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6 text-left font-sans">Enrollment</h3>
                 <form onSubmit={saveStudentEntry} className="space-y-5 text-left">
-                  <div><label className="text-[10px] font-bold text-slate-400 uppercase ml-1 block mb-1 text-left font-sans">Student Name</label><input type="text" required value={studentForm.name} onChange={e=>setStudentForm({...studentForm, name:e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm font-bold text-left outline-none" /></div>
+                  <div><label className="text-[10px] font-bold text-slate-400 uppercase ml-1 block mb-1 text-left font-sans">Student Name</label><input type="text" required value={studentForm.name} onChange={e => setStudentForm({ ...studentForm, name: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm font-bold text-left outline-none" /></div>
                   <div className="grid grid-cols-2 gap-4 text-left">
-                    <div><label className="text-[10px] font-bold text-slate-400 uppercase block mb-1 text-left font-sans">School</label><input type="text" value={studentForm.school} onChange={e=>setStudentForm({...studentForm, school:e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm font-bold text-left" /></div>
-                    <div><label className="text-[10px] font-bold text-slate-400 uppercase block mb-1 text-left font-sans">Age</label><input type="number" value={studentForm.age} onChange={e=>setStudentForm({...studentForm, age:e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm font-bold text-left" /></div>
+                    <div><label className="text-[10px] font-bold text-slate-400 uppercase block mb-1 text-left font-sans">School</label><input type="text" value={studentForm.school} onChange={e => setStudentForm({ ...studentForm, school: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm font-bold text-left" /></div>
+                    <div><label className="text-[10px] font-bold text-slate-400 uppercase block mb-1 text-left font-sans">Age</label><input type="number" value={studentForm.age} onChange={e => setStudentForm({ ...studentForm, age: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm font-bold text-left" /></div>
                   </div>
-                  <div><label className="text-[10px] font-bold text-slate-400 uppercase block mb-1 text-left font-sans">Next Class</label><input type="date" value={studentForm.nextClassDate} onChange={e=>setStudentForm({...studentForm, nextClassDate:e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm font-bold text-left" /></div>
+                  <div><label className="text-[10px] font-bold text-slate-400 uppercase block mb-1 text-left font-sans">Next Class</label><input type="date" value={studentForm.nextClassDate} onChange={e => setStudentForm({ ...studentForm, nextClassDate: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm font-bold text-left" /></div>
                   <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-4 text-left">
                     <div className="flex justify-between items-center text-left"><span className="text-[9px] font-black text-slate-400 uppercase tracking-widest font-sans">Auth Setup</span><button type="button" onClick={fillCredentialsFields} className="text-[9px] bg-slate-200 px-2 py-1 rounded font-black text-slate-500 tracking-widest hover:bg-slate-300 font-sans">AUTO FILL</button></div>
-                    <div className="grid grid-cols-1 gap-2 text-left font-sans"><input type="text" placeholder="ID" value={studentForm.studentLoginId} onChange={e=>setStudentForm({...studentForm, studentLoginId:e.target.value})} className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs font-bold text-left" /><input type="text" placeholder="PW" value={studentForm.studentPassword} onChange={e=>setStudentForm({...studentForm, studentPassword:e.target.value})} className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs font-bold text-left" /></div>
+                    <div className="grid grid-cols-1 gap-2 text-left font-sans"><input type="text" placeholder="ID" value={studentForm.studentLoginId} onChange={e => setStudentForm({ ...studentForm, studentLoginId: e.target.value })} className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs font-bold text-left" /><input type="text" placeholder="PW" value={studentForm.studentPassword} onChange={e => setStudentForm({ ...studentForm, studentPassword: e.target.value })} className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs font-bold text-left" /></div>
                   </div>
                   <button type="submit" className="w-full bg-orange-600 text-white font-black py-4 rounded-xl shadow-lg hover:bg-orange-700 transition-all uppercase tracking-widest text-sm font-sans">{editingStudent ? 'UPDATE' : 'REGISTER'}</button>
                 </form>
@@ -639,7 +639,7 @@ const App = () => {
               <div className="xl:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
                 {students.map(s => (
                   <div key={s.id} className="bg-white p-6 rounded-3xl border border-slate-200 flex flex-col justify-between shadow-sm relative group hover:border-orange-300 transition-all text-left">
-                    <div className="absolute top-0 right-0 p-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-all text-left"><button onClick={()=>{setEditingStudent(s); setStudentForm(s); window.scrollTo(0,0);}} className="p-2 bg-slate-50 text-slate-400 hover:text-orange-600 rounded-lg transition-colors"><Edit2 size={14}/></button><button onClick={async()=>{if(window.confirm('削除？')){await deleteDoc(doc(db,'artifacts',appId,'public', 'data', 'students',s.id));}}} className="p-2 bg-slate-50 text-slate-400 hover:text-rose-500 rounded-lg transition-colors"><Trash2 size={14}/></button></div>
+                    <div className="absolute top-0 right-0 p-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-all text-left"><button onClick={() => { setEditingStudent(s); setStudentForm(s); window.scrollTo(0, 0); }} className="p-2 bg-slate-50 text-slate-400 hover:text-orange-600 rounded-lg transition-colors"><Edit2 size={14} /></button><button onClick={async () => { if (window.confirm('削除？')) { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'students', s.id)); } }} className="p-2 bg-slate-50 text-slate-400 hover:text-rose-500 rounded-lg transition-colors"><Trash2 size={14} /></button></div>
                     <div className="text-left"><h4 className="font-black text-xl text-slate-800 text-left tracking-tight">{s.name}</h4><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-left font-sans">{s.school} | {s.age}歳</p></div>
                     <div className="mt-6 pt-4 border-t border-slate-50 flex justify-between text-[10px] font-bold text-slate-400 font-sans uppercase"><span>ID: {s.studentLoginId}</span><span>P-ID: {s.parentLoginId}</span></div>
                   </div>
@@ -655,19 +655,77 @@ const App = () => {
             <header className="text-left"><h2 className="text-2xl font-black tracking-tight text-left text-slate-800">協賛企業・支援管理</h2></header>
             <div className="grid grid-cols-1 xl:grid-cols-4 gap-8 text-left items-start">
               <div className="xl:col-span-1 bg-white rounded-3xl border border-slate-200 p-6 shadow-sm text-left">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6 text-left font-sans">Partnership Form</h3>
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6 text-left font-sans">協賛企業登録</h3>
                 <form onSubmit={saveSponsorEntry} className="space-y-4 text-left font-sans">
-                  <div className="space-y-1 text-left"><label className="text-[10px] font-bold text-slate-400 uppercase ml-1 block text-left">Company Name</label><input type="text" required value={sponsorForm.name} onChange={e=>setSponsorForm({...sponsorForm, name:e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-left outline-none focus:ring-2 focus:ring-orange-500" /></div>
-                  <div className="space-y-1 text-left"><label className="text-[10px] font-bold text-slate-400 uppercase ml-1 block text-left">Monthly Sum</label><input type="number" required value={sponsorForm.amount} onChange={e=>setSponsorForm({...sponsorForm, amount:e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-orange-600 text-left outline-none focus:ring-2 focus:ring-orange-500" /></div>
-                  <button type="submit" className="w-full bg-orange-600 text-white font-black py-4 rounded-xl shadow-lg hover:bg-orange-700 transition-all uppercase tracking-widest text-sm active:scale-95">Save Partner</button>
+                  <div className="space-y-1 text-left"><label className="text-[10px] font-bold text-slate-400 uppercase ml-1 block text-left">会社名</label><input type="text" required value={sponsorForm.name} onChange={e => setSponsorForm({ ...sponsorForm, name: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-left outline-none focus:ring-2 focus:ring-orange-500" /></div>
+                  <div className="space-y-1 text-left"><label className="text-[10px] font-bold text-slate-400 uppercase ml-1 block text-left">代表者名</label><input type="text" value={sponsorForm.repName} onChange={e => setSponsorForm({ ...sponsorForm, repName: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-left outline-none focus:ring-2 focus:ring-orange-500" /></div>
+                  <div className="space-y-1 text-left"><label className="text-[10px] font-bold text-slate-400 uppercase ml-1 block text-left">メールアドレス</label><input type="email" value={sponsorForm.email} onChange={e => setSponsorForm({ ...sponsorForm, email: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-left outline-none focus:ring-2 focus:ring-orange-500" /></div>
+                  <div className="space-y-1 text-left"><label className="text-[10px] font-bold text-slate-400 uppercase ml-1 block text-left">月額協賛金</label><input type="number" required value={sponsorForm.amount} onChange={e => setSponsorForm({ ...sponsorForm, amount: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-orange-600 text-left outline-none focus:ring-2 focus:ring-orange-500" /></div>
+                  <button type="submit" className="w-full bg-orange-600 text-white font-black py-4 rounded-xl shadow-lg hover:bg-orange-700 transition-all uppercase tracking-widest text-sm active:scale-95">協賛企業を保存</button>
                 </form>
               </div>
               <div className="xl:col-span-3 space-y-4 text-left font-sans">
-                <div className="flex justify-between items-end mb-2 px-2 text-slate-800 text-left"><p className="text-xs font-bold uppercase tracking-widest opacity-40 text-left">Active Sponsorships</p><p className="font-black text-xl text-right">Total: ¥{sponsorshipTotal.toLocaleString()}</p></div>
+                <div className="flex justify-between items-end mb-2 px-2 text-slate-800 text-left"><p className="text-xs font-bold uppercase tracking-widest opacity-40 text-left">契約中の協賛企業</p><p className="font-black text-xl text-right">合計: ¥{sponsorshipTotal.toLocaleString()}</p></div>
                 {sponsors.map(s => (
                   <div key={s.id} className="bg-white p-6 rounded-3xl border border-slate-200 flex flex-col md:flex-row justify-between items-center group hover:border-orange-300 transition-all text-left shadow-sm">
-                    <div className="text-left w-full flex items-center gap-4"><div className="bg-orange-50 p-3 rounded-2xl"><Building className="text-orange-500" size={24} /></div><div className="text-left"><h4 className="font-black text-lg text-slate-800 text-left">{s.name}</h4><p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest text-left">{s.repName || 'Official Partner'}</p></div></div>
-                    <div className="flex items-center gap-6 shrink-0 mt-4 md:mt-0 text-left"><p className="text-xl font-black text-orange-600 text-left tracking-tighter">¥{Number(s.amount).toLocaleString()}</p><div className="flex gap-2 text-left"><button onClick={()=>{setEditingSponsor(s); setSponsorForm(s); window.scrollTo(0,0);}} className="p-2 bg-slate-50 text-slate-400 hover:text-orange-600 transition-all"><Edit2 size={16}/></button><button onClick={()=>deleteSponsorEntry(s.id)} className="p-2 bg-slate-50 text-slate-400 hover:text-rose-500 transition-all"><Trash2 size={16}/></button></div></div>
+                    <div className="text-left w-full flex items-center gap-4"><div className="bg-orange-50 p-3 rounded-2xl"><Building className="text-orange-500" size={24} /></div><div className="text-left"><h4 className="font-black text-lg text-slate-800 text-left">{s.name}</h4><p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest text-left">{s.repName || 'Official Partner'} {s.email && <span className="normal-case tracking-normal ml-2 text-slate-300">| {s.email}</span>}</p></div></div>
+                    <div className="flex items-center gap-6 shrink-0 mt-4 md:mt-0 text-left"><p className="text-xl font-black text-orange-600 text-left tracking-tighter">¥{Number(s.amount).toLocaleString()}</p><div className="flex gap-2 text-left"><button onClick={() => { setEditingSponsor(s); setSponsorForm(s); window.scrollTo(0, 0); }} className="p-2 bg-slate-50 text-slate-400 hover:text-orange-600 transition-all"><Edit2 size={16} /></button><button onClick={() => deleteSponsorEntry(s.id)} className="p-2 bg-slate-50 text-slate-400 hover:text-rose-500 transition-all"><Trash2 size={16} /></button></div></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 教材管理 (管理者) - 復旧 */}
+        {currentUser.role === 'admin' && activeTab === 'materials' && (
+          <div className="space-y-8 animate-in fade-in duration-500 text-left text-slate-900">
+            <header className="text-left"><h2 className="text-2xl font-black tracking-tight text-left text-slate-800">教材管理システム</h2></header>
+            <div className="grid grid-cols-1 xl:grid-cols-4 gap-8 text-left items-start">
+              <div className="xl:col-span-1 bg-white rounded-3xl border border-slate-200 p-6 shadow-sm text-left">
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6 text-left font-sans">教材登録</h3>
+                <form onSubmit={saveMaterialEntry} className="space-y-4 text-left font-sans">
+                  <div className="space-y-1 text-left"><label className="text-[10px] font-bold text-slate-400 uppercase ml-1 block text-left">教材タイトル</label><input type="text" required value={materialForm.title} onChange={e => setMaterialForm({ ...materialForm, title: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-left outline-none focus:ring-2 focus:ring-orange-500" /></div>
+                  <div className="space-y-1 text-left"><label className="text-[10px] font-bold text-slate-400 uppercase ml-1 block text-left">教材URL</label><input type="url" required value={materialForm.url} onChange={e => setMaterialForm({ ...materialForm, url: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-left outline-none focus:ring-2 focus:ring-orange-500" /></div>
+                  <div className="space-y-1 text-left"><label className="text-[10px] font-bold text-slate-400 uppercase ml-1 block text-left">タグ (カンマ区切り)</label><input type="text" value={materialForm.tags} onChange={e => setMaterialForm({ ...materialForm, tags: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-left outline-none focus:ring-2 focus:ring-orange-500" placeholder="例: 算数, 理科" /></div>
+                  <button type="submit" className="w-full bg-orange-600 text-white font-black py-4 rounded-xl shadow-lg hover:bg-orange-700 transition-all uppercase tracking-widest text-sm active:scale-95">{editingMaterial ? '教材を更新' : '教材を登録'}</button>
+                </form>
+              </div>
+              <div className="xl:col-span-3 space-y-4 text-left font-sans">
+                {materials.map(m => (
+                  <div key={m.id} className="bg-white p-6 rounded-3xl border border-slate-200 flex flex-col md:flex-row justify-between items-center group hover:border-orange-300 transition-all text-left shadow-sm">
+                    <div className="text-left w-full"><h4 className="font-black text-lg text-slate-800 text-left">{m.title}</h4><div className="flex flex-wrap gap-2 mt-2 text-left">{m.tags.map(t => (<span key={t} className="bg-slate-100 text-slate-500 text-[10px] font-black px-2 py-0.5 rounded-full uppercase text-left tracking-widest font-sans">{t}</span>))}</div><a href={m.url} target="_blank" rel="noopener noreferrer" className="text-xs text-orange-500 font-bold mt-2 inline-block hover:underline truncate max-w-md">{m.url}</a></div>
+                    <div className="flex gap-2 text-left shrink-0 mt-4 md:mt-0"><button onClick={() => { setEditingMaterial(m); setMaterialForm({ title: m.title, url: m.url, tags: m.tags.join(', '), type: m.type }); window.scrollTo(0, 0); }} className="p-2 bg-slate-50 text-slate-400 hover:text-orange-600 transition-all rounded-lg"><Edit2 size={16} /></button><button onClick={() => deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'materials', m.id))} className="p-2 bg-slate-50 text-slate-400 hover:text-rose-500 transition-all rounded-lg"><Trash2 size={16} /></button></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* お知らせ管理 (管理者) - 復旧 */}
+        {currentUser.role === 'admin' && activeTab === 'notices' && (
+          <div className="space-y-8 animate-in fade-in duration-500 text-left text-slate-900">
+            <header className="text-left"><h2 className="text-2xl font-black tracking-tight text-left text-slate-800">お知らせ配信</h2></header>
+            <div className="grid grid-cols-1 xl:grid-cols-4 gap-8 text-left items-start">
+              <div className="xl:col-span-1 bg-white rounded-3xl border border-slate-200 p-6 shadow-sm text-left">
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6 text-left font-sans">新規お知らせ作成</h3>
+                <form onSubmit={postAnnouncementToPortal} className="space-y-4 text-left font-sans">
+                  <div className="space-y-1 text-left"><label className="text-[10px] font-bold text-slate-400 uppercase ml-1 block text-left">タイトル</label><input type="text" required value={announcementForm.title} onChange={e => setAnnouncementForm({ ...announcementForm, title: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-left outline-none focus:ring-2 focus:ring-orange-500" /></div>
+                  <div className="space-y-1 text-left"><label className="text-[10px] font-bold text-slate-400 uppercase ml-1 block text-left">種類</label><select value={announcementForm.type} onChange={e => setAnnouncementForm({ ...announcementForm, type: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-left outline-none focus:ring-2 focus:ring-orange-500"><option value="info">お知らせ</option><option value="alert">重要</option><option value="event">イベント</option></select></div>
+                  <div className="space-y-1 text-left"><label className="text-[10px] font-bold text-slate-400 uppercase ml-1 block text-left">本文</label><textarea required value={announcementForm.content} onChange={e => setAnnouncementForm({ ...announcementForm, content: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-left outline-none focus:ring-2 focus:ring-orange-500 h-32 resize-none" /></div>
+                  <button type="submit" className="w-full bg-orange-600 text-white font-black py-4 rounded-xl shadow-lg hover:bg-orange-700 transition-all uppercase tracking-widest text-sm active:scale-95">公開する</button>
+                </form>
+              </div>
+              <div className="xl:col-span-3 space-y-4 text-left font-sans">
+                {announcements.map(a => (
+                  <div key={a.id} className="bg-white p-6 rounded-3xl border border-slate-200 space-y-3 relative group hover:border-orange-300 transition-all text-left shadow-sm">
+                    <div className="flex justify-between items-start text-left">
+                      <div className="text-left"><span className={`text-[10px] font-black px-2 py-1 rounded uppercase tracking-widest text-left font-sans ${a.type === 'alert' ? 'bg-rose-100 text-rose-600' : a.type === 'event' ? 'bg-emerald-100 text-emerald-600' : 'bg-blue-100 text-blue-600'}`}>{a.type === 'alert' ? '重要' : a.type === 'event' ? 'イベント' : 'お知らせ'}</span><span className="text-[10px] text-slate-400 font-bold ml-2 uppercase tracking-widest text-left font-sans">{a.createdAt ? new Date(a.createdAt.toMillis()).toLocaleDateString() : '---'}</span></div>
+                      <button onClick={() => deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'announcements', a.id))} className="p-2 bg-slate-50 text-slate-400 hover:text-rose-500 transition-all rounded-lg"><Trash2 size={16} /></button>
+                    </div>
+                    <h4 className="font-black text-lg text-slate-800 text-left">{a.title}</h4>
+                    <p className="text-sm text-slate-500 leading-relaxed text-left">{a.content}</p>
                   </div>
                 ))}
               </div>
@@ -684,10 +742,10 @@ const App = () => {
                 <div key={m.id} onClick={() => setSelectedMaterial(m)} className="bg-white p-8 rounded-[2rem] border border-slate-200 flex flex-col justify-between group shadow-sm hover:shadow-md transition-all text-left cursor-pointer hover:border-orange-500">
                   <div className="text-left">
                     <div className="flex justify-between items-start mb-2">
-                       <h4 className="font-black text-slate-800 text-xl text-left tracking-tight">{m.title}</h4>
-                       {m.type === 'scratch' && <div className="bg-orange-600 text-white text-[9px] font-black px-2 py-1 rounded uppercase font-sans tracking-widest animate-pulse">Scratch Mode</div>}
+                      <h4 className="font-black text-slate-800 text-xl text-left tracking-tight">{m.title}</h4>
+                      {m.type === 'scratch' && <div className="bg-orange-600 text-white text-[9px] font-black px-2 py-1 rounded uppercase font-sans tracking-widest animate-pulse">Scratch Mode</div>}
                     </div>
-                    <div className="flex flex-wrap gap-2 mt-2 text-left">{m.tags.map(t=>(<span key={t} className="bg-slate-100 text-slate-500 text-[10px] font-black px-2 py-0.5 rounded-full uppercase text-left tracking-widest font-sans">{t}</span>))}</div>
+                    <div className="flex flex-wrap gap-2 mt-2 text-left">{m.tags.map(t => (<span key={t} className="bg-slate-100 text-slate-500 text-[10px] font-black px-2 py-0.5 rounded-full uppercase text-left tracking-widest font-sans">{t}</span>))}</div>
                   </div>
                   <div className="mt-8 flex items-center gap-2 text-orange-600 text-sm font-black uppercase tracking-widest font-sans group-hover:gap-3 transition-all">VIEW CONTENT <ChevronRight size={16} /></div>
                 </div>
@@ -703,8 +761,8 @@ const App = () => {
             <header className="flex flex-col md:flex-row justify-between items-start gap-6 text-left">
               <div className="text-left"><h2 className="text-3xl font-black tracking-tight text-left text-slate-800 uppercase font-sans">{currentUser.name}様 <span className="text-orange-600 font-light ml-2">My Portal</span></h2><p className="text-slate-400 text-sm font-medium mt-1 text-left">日々の成果を記録し、世界にひとつのポートフォリオを構築しましょう。</p></div>
               <div className="w-full md:w-auto grid grid-cols-2 gap-4 shrink-0 text-left font-sans">
-                 <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-xl flex flex-col justify-center text-left"><p className="text-[10px] font-black text-slate-400 uppercase mb-1 flex items-center gap-1.5 text-left tracking-widest"><Clock size={12} className="text-orange-500" /> NEXT CLASS</p><p className="text-xl font-black text-slate-800 whitespace-nowrap text-left">{currentUser.nextClassDate || '---'}</p></div>
-                 <div className="bg-orange-600 p-5 rounded-3xl text-white shadow-xl flex flex-col justify-center text-left"><p className="text-[10px] font-black uppercase mb-1 opacity-60 tracking-widest text-left font-sans">MONTHLY SAVING</p><p className="text-xl font-black tracking-tighter text-left">¥{reductionPerStudentVal.toLocaleString()}</p></div>
+                <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-xl flex flex-col justify-center text-left"><p className="text-[10px] font-black text-slate-400 uppercase mb-1 flex items-center gap-1.5 text-left tracking-widest"><Clock size={12} className="text-orange-500" /> NEXT CLASS</p><p className="text-xl font-black text-slate-800 whitespace-nowrap text-left">{currentUser.nextClassDate || '---'}</p></div>
+                <div className="bg-orange-600 p-5 rounded-3xl text-white shadow-xl flex flex-col justify-center text-left"><p className="text-[10px] font-black uppercase mb-1 opacity-60 tracking-widest text-left font-sans">MONTHLY SAVING</p><p className="text-xl font-black tracking-tighter text-left">¥{reductionPerStudentVal.toLocaleString()}</p></div>
               </div>
             </header>
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start text-left">
@@ -717,8 +775,8 @@ const App = () => {
               <div className={`${currentUser.role === 'student' ? 'lg:col-span-3' : 'lg:col-span-4'} space-y-6 text-left`}>
                 <h3 className="text-xl font-black text-slate-800 flex items-center gap-3 text-left"><ImageIcon size={22} className="text-orange-500" /> 成長のポートフォリオ</h3>
                 <div className="grid grid-cols-1 gap-6 text-left">
-                  {learningRecords.length === 0 ? <div className="bg-white rounded-3xl border border-dashed border-slate-200 p-20 text-center text-slate-400 font-bold text-xs uppercase tracking-widest font-sans">No data recorded.</div> : 
-                    learningRecords.sort((a,b)=>b.date.localeCompare(a.date)).map(record => (
+                  {learningRecords.length === 0 ? <div className="bg-white rounded-3xl border border-dashed border-slate-200 p-20 text-center text-slate-400 font-bold text-xs uppercase tracking-widest font-sans">No data recorded.</div> :
+                    learningRecords.sort((a, b) => b.date.localeCompare(a.date)).map(record => (
                       <div key={record.id} className="bg-white rounded-[2rem] border border-slate-200 overflow-hidden flex flex-col md:flex-row shadow-sm hover:shadow-md transition-all text-left">
                         <div className="p-8 flex-1 space-y-5 text-left">
                           <div className="text-left font-sans"><p className="text-[10px] font-black text-orange-600 uppercase tracking-[0.2em] mb-1 text-left">{new Date(record.date).toLocaleDateString()}</p><h4 className="text-2xl font-black text-slate-800 text-left tracking-tight">{record.title}</h4></div>
