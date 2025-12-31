@@ -406,7 +406,10 @@ const App = () => {
               </div>
               {/* 右側: Scratchエディタ */}
               <div className="flex-1 bg-white relative text-left">
-                <iframe src="https://turbowarp.org/editor" className="w-full h-full border-none text-left" title="Scratch Editor" allowTransparency="true" allowFullScreen="true" sandbox="allow-scripts allow-same-origin allow-popups allow-forms" />
+                <div className="absolute top-4 right-4 z-10">
+                  <a href="https://turbowarp.org/editor" target="_blank" rel="noopener noreferrer" className="bg-orange-600 text-white px-4 py-2 rounded-xl shadow-lg font-bold text-xs flex items-center gap-2 hover:bg-orange-700 transition-all font-sans"><ExternalLink size={14} /> Open Editor in New Tab</a>
+                </div>
+                <iframe src="https://turbowarp.org/editor?v=2" className="w-full h-full border-none text-left" title="Scratch Editor" allowTransparency="true" allowFullScreen="true" sandbox="allow-scripts allow-same-origin allow-popups allow-forms" />
               </div>
             </>
           ) : (
