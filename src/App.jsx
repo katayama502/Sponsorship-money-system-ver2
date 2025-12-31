@@ -37,12 +37,12 @@ import {
   Eye,
   MessageSquare,
   Bell,
-  Clock,
-  AlertTriangle,
   Megaphone,
   ChevronDown,
   Tag,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Mail,
+  Building
 } from 'lucide-react';
 
 // Firebase imports
@@ -93,7 +93,7 @@ const App = () => {
 
   // --- データ状態 ---
   const [costs, setCosts] = useState({ '家賃': 150000, '水道光熱費': 30000, '講師費用': 200000, '教材費': 50000, '備品費': 20000 });
-  const [sponsorship, setSponsorship] = useState(300000);
+  // const [sponsorship, setSponsorship] = useState(300000); // Removed manual state
   const [bufferStudentTarget, setBufferStudentTarget] = useState(5);
   const [historyRecords, setHistoryRecords] = useState([]);
   const [students, setStudents] = useState([]);
@@ -120,6 +120,11 @@ const App = () => {
   const [materialForm, setMaterialForm] = useState({ title: '', url: '', tags: '' }); // tags is comma separated string
   const [editingMaterial, setEditingMaterial] = useState(null);
   const [selectedTag, setSelectedTag] = useState('All');
+
+  // --- 協賛企業データ状態 ---
+  const [sponsors, setSponsors] = useState([]);
+  const [sponsorForm, setSponsorForm] = useState({ name: '', repName: '', email: '', amount: '' });
+  const [editingSponsor, setEditingSponsor] = useState(null);
 
   // --- Firebase 認証 & リアルタイムリスナー ---
   useEffect(() => {
@@ -213,6 +218,9 @@ const App = () => {
 
   const totalOperatingCost = useMemo(() => Object.values(costs).reduce((acc, curr) => acc + curr, 0), [costs]);
   const totalStudents = students.length;
+  // Calculate sponsorship from DB records
+  const sponsorship = useMemo(() => sponsors.reduce((acc, s) => acc + (s.amount || 0), 0), [sponsors]);
+
   const totalBaseRevenue = COURSE_BASES.reduce((acc, c) => acc + (c.price * (studentCountsFromDb[c.id] || 0)), 0);
   const bufferAmount = bufferStudentTarget * COURSE_BASES[0].price;
   const availableSurplus = (totalBaseRevenue + sponsorship) - (totalOperatingCost + bufferAmount);
@@ -356,7 +364,7 @@ const App = () => {
     setTimeout(() => setSaveMessage(''), 3000);
   };
 
-  const deleteMaterial = async (materialId) => { // Added deleteMaterial function
+  const deleteMaterial = async (materialId) => {
     try {
       await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'materials', materialId));
       setSaveMessage('教材を削除しました');
@@ -365,6 +373,35 @@ const App = () => {
     }
     setTimeout(() => setSaveMessage(''), 3000);
   };
+
+  const saveSponsor = async (e) => {
+    e.preventDefault();
+    try {
+      const amountVal = parseInt(sponsorForm.amount) || 0;
+      if (editingSponsor) {
+        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'sponsors', editingSponsor.id), {
+          ...sponsorForm, amount: amountVal, updatedAt: serverTimestamp()
+        });
+        setSaveMessage('協賛企業情報を更新しました');
+      } else {
+        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'sponsors'), {
+          ...sponsorForm, amount: amountVal, createdAt: serverTimestamp()
+        });
+        setSaveMessage('協賛企業を追加しました');
+      }
+      setSponsorForm({ name: '', repName: '', email: '', amount: '' });
+      setEditingSponsor(null);
+    } catch (e) { setSaveMessage('保存エラー'); }
+    setTimeout(() => setSaveMessage(''), 3000);
+  };
+
+  const deleteSponsor = async (id) => {
+    try {
+      await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'sponsors', id));
+      setSaveMessage('削除しました');
+    } catch (e) { setSaveMessage('削除失敗'); }
+  };
+
 
   // --- サブコンポーネント: TrendChart ---
   const TrendChart = () => {
@@ -526,6 +563,7 @@ const App = () => {
                 <>
                   <button onClick={() => setActiveTab('dashboard')} className={`px-2 md:px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'dashboard' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500'}`}>分析</button>
                   <button onClick={() => setActiveTab('students')} className={`px-2 md:px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'students' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500'}`}>生徒管理</button>
+                  <button onClick={() => setActiveTab('sponsors')} className={`px-2 md:px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'sponsors' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500'}`}>協賛企業</button>
                   <button onClick={() => setActiveTab('materials')} className={`px-2 md:px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'materials' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500'}`}>教材管理</button>
                   <button onClick={() => setActiveTab('notices')} className={`px-2 md:px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'notices' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500'}`}>お知らせ</button>
                 </>
@@ -787,6 +825,136 @@ const App = () => {
                   </div>
                 ))}
                 {students.length === 0 && <div className="md:col-span-2 py-20 bg-white rounded-3xl border border-dashed border-slate-200 text-center"><p className="text-slate-400 font-bold">生徒が登録されていません</p></div>}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 5. 管理者: 協賛企業管理 */}
+        {currentUser.role === 'admin' && activeTab === 'sponsors' && (
+          <div className="space-y-8 animate-in fade-in duration-500">
+            <header className="text-left"><h2 className="text-2xl font-black text-slate-800 tracking-tight">協賛企業管理</h2></header>
+            <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
+              <div className="xl:col-span-1 bg-white rounded-3xl border border-slate-200 p-6 h-fit sticky top-24">
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">{editingSponsor ? '企業情報を編集' : '新規企業を登録'}</h3>
+                <form onSubmit={saveSponsor} className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">会社名</label>
+                    <input type="text" required value={sponsorForm.name} onChange={e => setSponsorForm({ ...sponsorForm, name: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">担当者名</label>
+                    <input type="text" value={sponsorForm.repName} onChange={e => setSponsorForm({ ...sponsorForm, repName: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">メールアドレス</label>
+                    <input type="email" value={sponsorForm.email} onChange={e => setSponsorForm({ ...sponsorForm, email: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">月額協賛金額 (円)</label>
+                    <input type="number" required value={sponsorForm.amount} onChange={e => setSponsorForm({ ...sponsorForm, amount: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold" />
+                  </div>
+                  <button type="submit" className="w-full bg-orange-600 text-white font-black py-4 rounded-xl shadow-lg hover:bg-orange-700 transition-all flex items-center justify-center gap-2 active:scale-95">
+                    {editingSponsor ? <Edit2 size={18} /> : <Plus size={18} />}
+                    {editingSponsor ? '更新する' : '登録する'}
+                  </button>
+                  {editingSponsor && (
+                    <button type="button" onClick={() => { setEditingSponsor(null); setSponsorForm({ name: '', repName: '', email: '', amount: '' }); }} className="w-full bg-slate-100 text-slate-500 font-bold py-3 rounded-xl hover:bg-slate-200 transition-all flex items-center justify-center gap-2">キャンセル</button>
+                  )}
+                </form>
+              </div>
+              <div className="xl:col-span-3 space-y-4">
+                <div className="flex justify-between items-end mb-2 px-2">
+                  <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">Registered Sponsors</p>
+                  <p className="text-slate-800 font-black text-xl">Total: ¥{sponsorship.toLocaleString()}<span className="text-xs text-slate-400 ml-1 font-bold">/ Month</span></p>
+                </div>
+                {sponsors.map(s => (
+                  <div key={s.id} className="bg-white p-6 rounded-3xl border border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 group hover:border-orange-300 transition-all shadow-sm">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <Building className="text-orange-500" size={16} />
+                        <h4 className="font-black text-lg text-slate-800">{s.name}</h4>
+                      </div>
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs font-bold text-slate-500">
+                        <span className="flex items-center gap-1"><UserPlus size={12} /> {s.repName || '担当者未登録'}</span>
+                        <span className="flex items-center gap-1"><Mail size={12} /> {s.email || 'Mail未登録'}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end">
+                      <p className="text-xl font-black text-orange-600">¥{parseInt(s.amount).toLocaleString()}</p>
+                      <div className="flex gap-2">
+                        <button onClick={() => { setEditingSponsor(s); setSponsorForm(s); window.scrollTo(0, 0); }} className="p-2 bg-slate-50 text-slate-400 hover:text-orange-600 rounded-lg"><Edit2 size={16} /></button>
+                        <button onClick={() => deleteSponsor(s.id)} className="p-2 bg-slate-50 text-slate-400 hover:text-rose-500 rounded-lg"><Trash2 size={16} /></button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {sponsors.length === 0 && <div className="py-20 bg-white rounded-3xl border border-dashed border-slate-200 text-center"><p className="text-slate-400 font-bold">協賛企業が登録されていません</p></div>}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 5. 管理者: 協賛企業管理 */}
+        {currentUser.role === 'admin' && activeTab === 'sponsors' && (
+          <div className="space-y-8 animate-in fade-in duration-500">
+            <header className="text-left"><h2 className="text-2xl font-black text-slate-800 tracking-tight">協賛企業管理</h2></header>
+            <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
+              <div className="xl:col-span-1 bg-white rounded-3xl border border-slate-200 p-6 h-fit sticky top-24">
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">{editingSponsor ? '企業情報を編集' : '新規企業を登録'}</h3>
+                <form onSubmit={saveSponsor} className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">会社名</label>
+                    <input type="text" required value={sponsorForm.name} onChange={e => setSponsorForm({ ...sponsorForm, name: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">担当者名</label>
+                    <input type="text" value={sponsorForm.repName} onChange={e => setSponsorForm({ ...sponsorForm, repName: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">メールアドレス</label>
+                    <input type="email" value={sponsorForm.email} onChange={e => setSponsorForm({ ...sponsorForm, email: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">月額協賛金額 (円)</label>
+                    <input type="number" required value={sponsorForm.amount} onChange={e => setSponsorForm({ ...sponsorForm, amount: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold" />
+                  </div>
+                  <button type="submit" className="w-full bg-orange-600 text-white font-black py-4 rounded-xl shadow-lg hover:bg-orange-700 transition-all flex items-center justify-center gap-2 active:scale-95">
+                    {editingSponsor ? <Edit2 size={18} /> : <Plus size={18} />}
+                    {editingSponsor ? '更新する' : '登録する'}
+                  </button>
+                  {editingSponsor && (
+                    <button type="button" onClick={() => { setEditingSponsor(null); setSponsorForm({ name: '', repName: '', email: '', amount: '' }); }} className="w-full bg-slate-100 text-slate-500 font-bold py-3 rounded-xl hover:bg-slate-200 transition-all flex items-center justify-center gap-2">キャンセル</button>
+                  )}
+                </form>
+              </div>
+              <div className="xl:col-span-3 space-y-4">
+                <div className="flex justify-between items-end mb-2 px-2">
+                  <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">Registered Sponsors</p>
+                  <p className="text-slate-800 font-black text-xl">Total: ¥{sponsorship.toLocaleString()}<span className="text-xs text-slate-400 ml-1 font-bold">/ Month</span></p>
+                </div>
+                {sponsors.map(s => (
+                  <div key={s.id} className="bg-white p-6 rounded-3xl border border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 group hover:border-orange-300 transition-all shadow-sm">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <Building className="text-orange-500" size={16} />
+                        <h4 className="font-black text-lg text-slate-800">{s.name}</h4>
+                      </div>
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs font-bold text-slate-500">
+                        <span className="flex items-center gap-1"><UserPlus size={12} /> {s.repName || '担当者未登録'}</span>
+                        <span className="flex items-center gap-1"><Mail size={12} /> {s.email || 'Mail未登録'}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end">
+                      <p className="text-xl font-black text-orange-600">¥{parseInt(s.amount).toLocaleString()}</p>
+                      <div className="flex gap-2">
+                        <button onClick={() => { setEditingSponsor(s); setSponsorForm(s); window.scrollTo(0, 0); }} className="p-2 bg-slate-50 text-slate-400 hover:text-orange-600 rounded-lg"><Edit2 size={16} /></button>
+                        <button onClick={() => deleteSponsor(s.id)} className="p-2 bg-slate-50 text-slate-400 hover:text-rose-500 rounded-lg"><Trash2 size={16} /></button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {sponsors.length === 0 && <div className="py-20 bg-white rounded-3xl border border-dashed border-slate-200 text-center"><p className="text-slate-400 font-bold">協賛企業が登録されていません</p></div>}
               </div>
             </div>
           </div>
